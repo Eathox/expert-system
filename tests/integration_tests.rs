@@ -7,7 +7,7 @@ mod integration_tests {
     macro_rules! run_cmd {
         ( $( $x:expr ),* ) => {{
             let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-            $(cmd.args($x);)*
+            $( cmd.args($x); )*
             cmd.assert()
         }}
     }
