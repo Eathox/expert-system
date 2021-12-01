@@ -11,3 +11,5 @@
 * Consequent: right hand side of a rule.
 
 * Backward Chaining: In backward chaining the system looks at possible conclusions and works backward to see if they might be true. 
+
+[Backward Chaining](http://www.exsys.com/pdf/BackwardChaining.pdf)
