@@ -1,13 +1,16 @@
 [package]
 name = "expert-system"
 version = "0.1.0"
-<<<<<<< HEAD
-authors = ["nanderstabel <nanderstabel@gmail.com>"]
-=======
 authors = ["nanderstabel <nanderstabel@gmail.com>", "pepijnholster <pgaholster@gmail.com>"]
->>>>>>> main
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[dev-dependencies]
+assert_cmd = "1.0.7"
+predicates = "2.0.1"
+pretty_assertions = "0.7.2"
+indoc = "0.3"
+dot = "0.1.4"
