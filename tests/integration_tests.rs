@@ -5,11 +5,15 @@ mod integration_tests {
     use std::process::Command;
 
     macro_rules! run_cmd {
-        ( $( $x:expr ),* ) => {{
+        ( $( $x:literal ),* ) => {{
+            let temp_vec: Vec<String> = vec![$($x.to_string(),)*];
+            run_cmd!(temp_vec)
+        }};
+        ( $( $i:expr ),* ) => {{
             let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-            $( cmd.args($x); )*
+            $( cmd.args($i); )*
             cmd.assert()
-        }}
+        }};
     }
 
     #[test]
