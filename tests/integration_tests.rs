@@ -6,7 +6,7 @@ mod integration_tests {
 
     macro_rules! run_cmd {
         ( $( $x:literal ),* ) => {{
-            let temp_vec: Vec<String> = vec![$($x.to_string(),)*];
+            let temp_vec: Vec<String> = vec![ $( $x.to_string() ),* ];
             run_cmd!(temp_vec)
         }};
         ( $( $i:expr ),* ) => {{
