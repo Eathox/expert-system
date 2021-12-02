@@ -17,13 +17,9 @@ mod integration_tests {
     }
 
     #[test]
-    fn no_arguments() {
-        run_cmd!().failure().stderr(USAGE);
-    }
-
-    #[test]
-    fn two_arguments() {
-        let input = ["foo", "bar"];
-        run_cmd!(input).failure().stderr(USAGE);
+    fn invalid_arguments() {
+        let output = USAGE;
+        run_cmd!().failure().stderr(output);
+        run_cmd!("foo", "bar").failure().stderr(output);
     }
 }
