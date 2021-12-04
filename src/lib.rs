@@ -1,1 +1,6 @@
-pub const USAGE: &str = "TODO: add usage\n";
+use indoc::indoc;
+
+pub const USAGE: &str = indoc! {"
+    TODO: add usage
+
+"};

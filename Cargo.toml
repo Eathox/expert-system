@@ -10,10 +10,10 @@ edition = "2018"
 name = "expert_system"
 
 [dependencies]
+indoc = "1.0.3"
 
 [dev-dependencies]
 assert_cmd = "1.0.7"
 predicates = "2.0.1"
 pretty_assertions = "0.7.2"
-indoc = "0.3"
 dot = "0.1.4"
