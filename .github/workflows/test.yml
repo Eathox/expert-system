@@ -17,6 +17,9 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
-    - uses: actions-rs/cargo@v1
+    - name: Cargo Test
+      run: cargo test -- -Z unstable-options --format json --report-time | cargo2junit > results.xml
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1
       with:
-        command: test
+        files: results.xml
