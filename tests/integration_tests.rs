@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod integration_tests {
     use assert_cmd::assert::*;
     use assert_cmd::cargo::CommandCargoExt;
