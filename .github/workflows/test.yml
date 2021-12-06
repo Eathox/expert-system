@@ -17,7 +17,11 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
-    - run: cargo install cargo2junit
+    - name: Cargo install deps
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args: cargo2junit
     - name: Cargo test
       run: cargo test -- -Z unstable-options --format json --report-time | cargo2junit > results.xml
     - name: Publish Test Results
