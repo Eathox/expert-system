@@ -6,13 +6,13 @@ mod integration_tests {
     use std::process::Command;
 
     macro_rules! run_cmd {
-        ( $( $x:literal ),* ) => {{
-            let temp_vec: Vec<String> = vec![ $( $x.to_string() ),* ];
+        ( $( $l:literal ),* ) => {{
+            let temp_vec: Vec<String> = vec![ $( $l.to_string() ),* ];
             run_cmd!(temp_vec)
         }};
-        ( $( $i:expr ),* ) => {{
+        ( $( $e:expr ),* ) => {{
             let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-            $( cmd.args($i); )*
+            $( cmd.args($e); )*
             cmd.assert()
         }};
     }
