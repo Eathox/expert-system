@@ -17,7 +17,8 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
-    - name: Cargo Test
+    - run: cargo install cargo2junit
+    - name: Cargo test
       run: cargo test -- -Z unstable-options --format json --report-time | cargo2junit > results.xml
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
