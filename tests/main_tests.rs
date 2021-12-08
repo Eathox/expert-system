@@ -1,8 +1,12 @@
+#[path = "../src/main.rs"]
+#[allow(dead_code, unused_imports)]
+mod main;
+
 #[cfg(test)]
-mod integration_tests {
+mod main_tests {
+    use super::*;
     use assert_cmd::assert::*;
     use assert_cmd::cargo::CommandCargoExt;
-    use expert_system::*;
     use std::process::Command;
 
     macro_rules! run_cmd {
@@ -19,7 +23,7 @@ mod integration_tests {
 
     #[test]
     fn invalid_arguments() {
-        let output = USAGE;
+        let output = main::USAGE;
         run_cmd!().failure().stderr(output);
         run_cmd!("foo", "bar").failure().stderr(output);
     }

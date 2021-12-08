@@ -1,5 +1,12 @@
+use anyhow::{Context, Result};
 use expert_system::*;
+use indoc::indoc;
 use std::env;
+
+pub const USAGE: &str = indoc! {"
+    TODO: add usage
+
+"};
 
 fn main() {
     if env::args().len() != 2 {
