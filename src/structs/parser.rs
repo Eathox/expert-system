@@ -28,10 +28,8 @@ impl<'a> Parser {
     }
 
     fn tokenize(&mut self) -> Result<Vec<Token>> {
-        let tokens = Vec::new();
-        let mut tokens = tokens.iter().peekable();
-        self.get_implicator(&mut tokens)
-            .context(format!("Could not tokenize: {}", "Line 4"))?;
+        // Dummy Error
+        File::open(&"dummy").context(format!("Could not tokenize: {}", "Line 4"))?;
 
         // implementation goes here
         todo!();
@@ -82,9 +80,11 @@ impl<'a> Parser {
     }
 
     pub fn parse(&mut self) -> Result<()> {
-        let tokens = self
-            .tokenize()
-            .context(format!("Could not parse {}", "line 4"))?;
+        let tokens = Vec::new();
+        let mut tokens = tokens.iter().peekable();
+
+        self.get_implicator(&mut tokens)
+            .context(format!("Could not parse: {}", "Line 4"))?;
 
         // implementation goes here
         todo!();
