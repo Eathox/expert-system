@@ -8,12 +8,20 @@ pub const USAGE: &str = indoc! {"
 
 "};
 
-fn main() {
-    if env::args().len() != 2 {
-        eprint!("{}", USAGE);
-        std::process::exit(1)
+fn handle_cli() -> String {
+    let args: Vec<String> = env::args().collect();
+    match args.len() {
+        2 => args[1].clone(),
+        _ => {
+            eprint!("{}", USAGE);
+            std::process::exit(1);
+        }
     }
+}
 
-    let input_file = env::args().nth(1).unwrap();
-    println!("{:?}", input_file);
+fn main() -> Result<()> {
+    let input_file = handle_cli();
+    let content: Vec<String> = read_file(input_file).context("Failed to read file")?;
+    println!("{:?}", content);
+    Ok(())
 }
