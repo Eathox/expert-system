@@ -3,6 +3,8 @@ use expert_system::*;
 use std::fs::File;
 use std::iter::Peekable;
 
+pub type Child<'a> = Box<Option<Node<'a>>>;
+
 pub enum Token {
     Implicator,
     Operator(char),
@@ -12,8 +14,8 @@ pub enum Token {
 
 pub struct Node<'a> {
     token: &'a Token,
-    left: Box<Option<Node<'a>>>,
-    right: Box<Option<Node<'a>>>,
+    left: Child<'a>,
+    right: Child<'a>,
 }
 
 pub struct Parser {
@@ -35,7 +37,7 @@ impl<'a> Parser {
         todo!();
     }
 
-    fn get_implicator<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Box<Option<Node<'a>>>>
+    fn get_implicator<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Child>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -46,7 +48,7 @@ impl<'a> Parser {
         todo!();
     }
 
-    fn get_operator<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Box<Option<Node<'a>>>>
+    fn get_operator<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Child>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -57,7 +59,7 @@ impl<'a> Parser {
         todo!();
     }
 
-    fn get_parenthesis<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Box<Option<Node<'a>>>>
+    fn get_parenthesis<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Child>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -68,7 +70,7 @@ impl<'a> Parser {
         todo!();
     }
 
-    fn get_identifier<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Box<Option<Node<'a>>>>
+    fn get_identifier<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Child>
     where
         I: Iterator<Item = &'a Token>,
     {
