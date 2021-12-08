@@ -1,18 +1,26 @@
-// TODO: Add integration tests
+#[cfg(test)]
+mod integration_tests {
+    use assert_cmd::assert::*;
+    use assert_cmd::cargo::CommandCargoExt;
+    use expert_system::*;
+    use std::process::Command;
 
-// mod integration_tests {
-//     use assert_cmd::prelude::*;
-//     use indoc::indoc;
-//     use std::process::Command;
+    macro_rules! run_cmd {
+        ( $( $l:literal ),* ) => {{
+            let temp_vec: Vec<String> = vec![ $( $l.to_string() ),* ];
+            run_cmd!(temp_vec)
+        }};
+        ( $( $e:expr ),* ) => {{
+            let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+            $( cmd.args($e); )*
+            cmd.assert()
+        }};
+    }
 
-//     fn compare(input: &'static str, output: &'static str) {
-//         let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-//         cmd.arg(input).assert().success().stdout(output);
-//     }
-
-//     #[test]
-//     fn subject_example1() {
-//         let input = "tests/valid_input/example_input.txt";
-//         let output = indoc!("");
-//     }
-// }
+    #[test]
+    fn invalid_arguments() {
+        let output = USAGE;
+        run_cmd!().failure().stderr(output);
+        run_cmd!("foo", "bar").failure().stderr(output);
+    }
+}
