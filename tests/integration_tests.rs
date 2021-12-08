@@ -22,7 +22,5 @@ mod integration_tests {
         let output = USAGE;
         run_cmd!().failure().stderr(output);
         run_cmd!("foo", "bar").failure().stderr(output);
-
-        run_cmd!().success(); // WIP, Remove
     }
 }
