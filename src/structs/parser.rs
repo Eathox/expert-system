@@ -5,11 +5,47 @@ use std::iter::Peekable;
 
 pub type Child<'a> = Box<Option<Node<'a>>>;
 
+pub struct Implicator;
+pub struct Operator(char);
+pub struct Parenthesis(char);
+pub struct Identifier(String);
+
 pub enum Token {
-    Implicator,
-    Operator(char),
-    Parenthesis(char),
-    Identifier(String), // Maybe just a char instead of String? --> A, B, C, D
+    Implicator(Implicator),
+    Operator(Operator),
+    Parenthesis(Parenthesis),
+    Identifier(Identifier), // Maybe just a char instead of String? --> A, B, C, D
+}
+
+pub trait FromToken {
+    fn get();
+}
+
+impl FromToken for Implicator {
+    Operator::get();
+    fn get() {
+        println!("Implicator");
+    }
+}
+
+impl FromToken for Operator {
+    Parenthesis::get();
+    fn get() {
+        println!("Operator");
+    }
+}
+
+impl FromToken for Parenthesis {
+    Identifier::get();
+    fn get() {
+        println!("Parenthesis");
+    }
+}
+
+impl FromToken for Identifier {
+    fn get() {
+        println!("Identifier");
+    }
 }
 
 pub struct Node<'a> {
