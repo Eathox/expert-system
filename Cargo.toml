@@ -11,6 +11,8 @@ name = "expert_system"
 
 [dependencies]
 indoc = "1.x"
+thiserror = "1.x"
+anyhow = "1.x"
 
 [dev-dependencies]
 assert_cmd = "2.x"
