@@ -2,6 +2,8 @@ use assert_cmd::assert::*;
 use assert_cmd::cargo::CommandCargoExt;
 use std::process::Command;
 
+mod common;
+
 #[path = "../src/main.rs"]
 #[allow(dead_code, unused_imports)]
 mod main;
