@@ -25,6 +25,16 @@ mod read_file {
     }
 
     #[test]
+    fn error_non_exist() {
+        let input_file = common::crate_input_file_path("non_exist.txt");
+        let result: Result<Vec<i32>, ReadFileError> = read_file(input_file);
+        assert!(matches!(
+            result,
+            Err(crate::ReadFileError::Read { source: _ })
+        ))
+    }
+
+    #[test]
     fn error_empty() {
         let input_file = common::crate_input_file_path("empty.txt");
         let result: Result<Vec<i32>, ReadFileError> = read_file(input_file);
