@@ -22,11 +22,11 @@ pub enum ReadFileError {
     IOError(#[from] io::Error),
 }
 
-pub fn read_file<T: FromStr>(filename: impl AsRef<Path>) -> Result<Vec<T>, ReadFileError>
+pub fn read_file<T: FromStr>(file: impl AsRef<Path>) -> Result<Vec<T>, ReadFileError>
 where
     T::Err: fmt::Debug,
 {
-    let file = File::open(filename).map_err(|source| ReadFileError::Read { source })?;
+    let file = File::open(file).map_err(|source| ReadFileError::Read { source })?;
     let file_buf = BufReader::new(file);
 
     let mut result = vec![];
