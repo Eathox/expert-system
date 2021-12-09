@@ -22,7 +22,7 @@ macro_rules! run_cmd {
 
 #[test]
 fn invalid_arguments() {
-    let output = main::USAGE;
-    run_cmd!().failure().stderr(output);
-    run_cmd!("foo", "bar").failure().stderr(output);
+    let expected = main::USAGE;
+    run_cmd!().failure().stderr(expected);
+    run_cmd!("foo", "bar").failure().stderr(expected);
 }
