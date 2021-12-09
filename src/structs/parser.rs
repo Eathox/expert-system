@@ -1,20 +1,21 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use expert_system::*;
 use std::fs::File;
 use std::iter::Peekable;
+
 
 pub type Child<'a> = Box<Option<Node<'a>>>;
 
 pub struct Implicator;
 pub struct Operator(char);
 pub struct Parenthesis(char);
-pub struct Identifier(String);
+pub struct Identifier(char);
 
 pub enum Token {
 	Implicator(Implicator),
 	Operator(Operator),
 	Parenthesis(Parenthesis),
-	Identifier(Identifier), // Maybe just a char instead of String? --> A, B, C, D
+	Identifier(Identifier),
 }
 
 pub trait FromToken {
@@ -57,7 +58,7 @@ impl FromToken for Parenthesis {
 	fn get<'a, I>(&mut self, tokens: &mut Peekable<I>) -> Result<Child>
 	where
 		I: Iterator<Item = &'a Token>, {
-		let mut identifier = Identifier(String::from("A"));
+		let mut identifier = Identifier('A');
 
 		identifier.get(tokens);
 		// Dummy Error
@@ -86,6 +87,8 @@ pub struct Node<'a> {
 	right: Child<'a>,
 }
 
+
+
 pub struct Parser {
 	tokens: Vec<Token>,
 }
@@ -95,17 +98,26 @@ impl<'a> Parser {
 		Parser { tokens: Vec::new() }
 	}
 
-	fn tokenize(&mut self) -> Result<Vec<Token>> {
-		// Dummy Error
-		File::open(&"dummy").context(format!("Could not tokenize: {}", "Line 4"))?;
+	fn tokenize(&mut self, rule: &str) -> Result<Vec<Token>> {
+		let mut lexer = rule.chars().peekable();
+		let mut tokens: Vec<Token> = Vec::new();
 
-		// implementation goes here
-		todo!();
+		while let Some(c) = lexer.next() {
+			match c {
+				'(' | ')' => tokens.push(Token::Parenthesis(Parenthesis(c))),
+				'!' | '+' | '|' | '^' => tokens.push(Token::Operator(Operator(c))),
+				'A' ..= 'Z' => tokens.push(Token::Identifier(Identifier(c))),
+				//TODO: Add Implicator
+				c if c.is_whitespace() => {},
+				_ => return Err(anyhow!("Unexpected character: {}", c))
+			}
+		}
+		Ok(tokens)
 	}
 
-	pub fn parse(&mut self) -> Result<()> {
-		let tokens = Vec::new();
-		let mut tokens = tokens.iter().peekable();
+	pub fn parse(&mut self, rule: &str) -> Result<()> {
+		let result = self.tokenize(rule).context(format!("Failed while lexing"))?;
+		let mut tokens = result.iter().peekable();
 
 		let mut consequent = Implicator;
 

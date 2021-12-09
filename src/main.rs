@@ -11,11 +11,11 @@ fn main() -> Result<()> {
         std::process::exit(1)
     }
 
-    let input_file = env::args().nth(1).unwrap();
-    println!("{:?}", input_file);
+    // let input_file = env::args().nth(1).unwrap();
+    // println!("{:?}", input_file);
 
     let mut parser = Parser::new();
-    parser.parse().context(format!("Unable to parse"))?;
+    parser.parse("(!)+   ^  Aa   |").context(format!("Unable to parse"))?;
 
 
     Ok(())
