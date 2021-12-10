@@ -38,8 +38,8 @@ where
         )
     }
 
-    if result.len() == 0 {
-        Err(ReadFileError::Empty)?;
+    match result.is_empty() {
+        true => Err(ReadFileError::Empty),
+        false => Ok(result),
     }
-    Ok(result)
 }
