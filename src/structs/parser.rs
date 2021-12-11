@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use std::iter::Peekable;
+use Token::*;
 
 macro_rules! node {
     ($token:expr) => {
@@ -26,7 +27,7 @@ pub enum Token {
     Implicator(Direction),
     Operator(char),
     Parenthesis(char),
-    Identifier(char),
+    Attribute(char),
 }
 
 #[derive(Debug, Clone)]
@@ -58,7 +59,7 @@ impl<'a> Parser {
                 ('=', '>') => Ok(Direction::UniDirectional),
                 ('<', '=') => match lexer.next() {
                     Some('>') => Ok(Direction::BiDirectional),
-                    _ => Err(anyhow!("Unable to finish reading biDirectional inplicator")),
+                    _ => Err(anyhow!("Unable to finish reading bidirectional inplicator")),
                 },
                 _ => Err(anyhow!("Unable to finish reading inplicator")),
             }
@@ -73,10 +74,10 @@ impl<'a> Parser {
 
         while let Some(c) = lexer.next() {
             match c {
-                '(' | ')' => tokens.push(Token::Parenthesis(c)),
-                '!' | '+' | '|' | '^' => tokens.push(Token::Operator(c)),
-                '=' | '<' => tokens.push(Token::Implicator(self.get_direction(&mut lexer, c)?)),
-                'A'..='Z' => tokens.push(Token::Identifier(c)),
+                '(' | ')' => tokens.push(Parenthesis(c)),
+                '!' | '+' | '|' | '^' => tokens.push(Operator(c)),
+                '=' | '<' => tokens.push(Implicator(self.get_direction(&mut lexer, c)?)),
+                'A'..='Z' => tokens.push(Attribute(c)),
                 c if c.is_whitespace() => {}
                 _ => return Err(anyhow!("Unexpected character: {}", c)),
             }
@@ -90,7 +91,7 @@ impl<'a> Parser {
     {
         let lhs = self.get_operator(tokens);
         match tokens.peek() {
-            Some(Token::Implicator(_)) => {
+            Some(Implicator(_)) => {
                 let token = tokens.next().context("Unexpected end of token list")?;
                 let rhs = self.get_rule(tokens);
                 Ok(node!(*token, lhs?, rhs?))
@@ -106,9 +107,7 @@ impl<'a> Parser {
         let mut token = self.get_factor(tokens);
         loop {
             match tokens.peek() {
-                Some(Token::Operator('+'))
-                | Some(Token::Operator('|'))
-                | Some(Token::Operator('^')) => {
+                Some(Operator('+')) | Some(Operator('|')) | Some(Operator('^')) => {
                     let parent = tokens.next().context("Unexpected end of token list")?;
                     let rhs = self.get_operator(tokens);
                     token = Ok(node!(*parent, token?, rhs?));
@@ -125,23 +124,18 @@ impl<'a> Parser {
     {
         let token = tokens.next();
         match token {
-            Some(Token::Parenthesis('(')) => {
+            Some(Parenthesis('(')) => {
                 let child = self.get_operator(tokens);
                 match tokens.next() {
-                    Some(Token::Parenthesis(')')) => child,
+                    Some(Parenthesis(')')) => child,
                     _ => Err(anyhow!("Missing closing parenthesis")),
                 }
             }
-            Some(Token::Operator('!')) => {
-                let child = self.get_factor(tokens);
-                Ok(node!(
-                    *token.context("Unexpected end of tokenlist")?,
-                    child?
-                ))
-            }
-            Some(Token::Identifier(_)) => {
-                Ok(node!(*token.context("Unexpected end of token list")?))
-            }
+            Some(Operator('!')) => Ok(node!(
+                *token.context("Unexpected end of tokenlist")?,
+                self.get_factor(tokens)?
+            )),
+            Some(Attribute(_)) => Ok(node!(*token.context("Unexpected end of token list")?)),
             _ => Err(anyhow!("Unexpected end of token list")),
         }
     }
