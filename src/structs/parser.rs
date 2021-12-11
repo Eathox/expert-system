@@ -79,7 +79,7 @@ impl<'a> Parser {
         let lhs = self.get_operator(tokens);
         match tokens.peek() {
             Some(Token::Implicator(_)) => {
-                let token = tokens.next().unwrap();
+                let token = tokens.next().context("Unexpected end of token list")?;
                 let rhs = self.get_rule(tokens);
                 Ok(Box::new(Some(Node::new(*token, lhs?, rhs?))))
             }
@@ -97,7 +97,7 @@ impl<'a> Parser {
                 Some(Token::Operator('+'))
                 | Some(Token::Operator('|'))
                 | Some(Token::Operator('^')) => {
-                    let parent = tokens.next().unwrap();
+                    let parent = tokens.next().context("Unexpected end of token list")?;
                     let rhs = self.get_operator(tokens);
                     token = Ok(Box::new(Some(Node::new(*parent, token?, rhs?))));
                 }
@@ -123,13 +123,13 @@ impl<'a> Parser {
             Some(Token::Operator('!')) => {
                 let child = self.get_factor(tokens);
                 Ok(Box::new(Some(Node::new(
-                    *token.unwrap(),
+                    *token.context("Unexpected end of tokenlist")?,
                     child?,
                     Box::new(None),
                 ))))
             }
             Some(Token::Identifier(_)) => Ok(Box::new(Some(Node::new(
-                *token.unwrap(),
+                *token.context("Unexpected end of token list")?,
                 Box::new(None),
                 Box::new(None),
             )))),
@@ -139,7 +139,7 @@ impl<'a> Parser {
 
     pub fn parse(&mut self) -> Result<Child> {
         let tokens = self
-            .tokenize("A+B <=")
+            .tokenize("A+B <=>+")
             .context(format!("Could not tokenize input"))?;
 
         let tree = self
