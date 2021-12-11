@@ -15,7 +15,9 @@ fn main() -> Result<()> {
     println!("{:?}", input_file);
 
     let mut parser = Parser::new();
-    let tree = parser.parse("=>B").context(format!("Unable to parse"))?;
+    let tree = parser
+        .parse("A !=> B")
+        .context(format!("Unable to parse"))?;
 
     println!("{:#?}", tree);
 

@@ -92,10 +92,13 @@ impl<'a> Parser {
         match tokens.peek() {
             Some(Implicator(_)) => {
                 let token = tokens.next().context("Unexpected end of token list")?;
-                let rhs = self.get_rule(tokens);
-                Ok(node!(*token, lhs?, rhs?))
+                let rhs = self.get_operator(tokens);
+                match tokens.next() {
+                    None => Ok(node!(*token, lhs?, rhs?)),
+                    Some(t) => Err(anyhow!("Found unexpected token: {:?}", t)),
+                }
             }
-            _ => lhs,
+            _ => Err(anyhow!("No implicator found")),
         }
     }
 
@@ -227,6 +230,7 @@ mod tests {
         assert!(parser
             .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
             .is_ok());
+        assert!(parser.parse("A => !!!B").is_ok());
     }
 
     #[test]
@@ -234,10 +238,21 @@ mod tests {
         let mut parser = Parser::new();
 
         assert!(parser.parse("=>").is_err());
-        // assert!(parser.parse("A").is_err());
-        // assert!(parser.parse("(").is_err());
-        // assert!(parser.parse(")").is_err());
-        // assert!(parser.parse("+").is_err());
-        // assert!(parser.parse("!").is_err());
+        assert!(parser.parse("A").is_err());
+        assert!(parser.parse("(").is_err());
+        assert!(parser.parse(")").is_err());
+        assert!(parser.parse("+").is_err());
+        assert!(parser.parse("!").is_err());
+        assert!(parser.parse("A => B => C").is_err());
+        assert!(parser.parse("(A + (B!)C").is_err());
+        assert!(parser.parse("A + (B!)C").is_err());
+        assert!(parser.parse("A = B").is_err());
+        assert!(parser
+            .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H))         ^ I | (J + (!K))")
+            .is_err());
+        assert!(parser.parse("A !=> B").is_err());
+        assert!(parser.parse("A => B!").is_err());
+        assert!(parser.parse("A++B => C").is_err());
+        assert!(parser.parse("A+B").is_err());
     }
 }
