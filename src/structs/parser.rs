@@ -1,12 +1,24 @@
 use anyhow::{anyhow, Context, Result};
 use std::iter::Peekable;
 
+macro_rules! node {
+    ($token:expr) => {
+        node!($token, Box::new(None), Box::new(None))
+    };
+    ($token:expr, $left:expr) => {
+        node!($token, $left, Box::new(None))
+    };
+    ($token:expr, $left:expr, $right:expr) => {
+        Box::new(Some(Node::new($token, $left, $right)))
+    };
+}
+
 pub type Child = Box<Option<Node>>;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Direction {
-    Unidirectional,
-    Bidirectional,
+    UniDirectional,
+    BiDirectional,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -43,10 +55,10 @@ impl<'a> Parser {
     {
         if let Some(next) = lexer.next() {
             match (c, next) {
-                ('=', '>') => Ok(Direction::Unidirectional),
+                ('=', '>') => Ok(Direction::UniDirectional),
                 ('<', '=') => match lexer.next() {
-                    Some('>') => Ok(Direction::Bidirectional),
-                    _ => Err(anyhow!("Unable to finish reading bidirectional inplicator")),
+                    Some('>') => Ok(Direction::BiDirectional),
+                    _ => Err(anyhow!("Unable to finish reading biDirectional inplicator")),
                 },
                 _ => Err(anyhow!("Unable to finish reading inplicator")),
             }
@@ -81,7 +93,7 @@ impl<'a> Parser {
             Some(Token::Implicator(_)) => {
                 let token = tokens.next().context("Unexpected end of token list")?;
                 let rhs = self.get_rule(tokens);
-                Ok(Box::new(Some(Node::new(*token, lhs?, rhs?))))
+                Ok(node!(*token, lhs?, rhs?))
             }
             _ => lhs,
         }
@@ -99,7 +111,7 @@ impl<'a> Parser {
                 | Some(Token::Operator('^')) => {
                     let parent = tokens.next().context("Unexpected end of token list")?;
                     let rhs = self.get_operator(tokens);
-                    token = Ok(Box::new(Some(Node::new(*parent, token?, rhs?))));
+                    token = Ok(node!(*parent, token?, rhs?));
                 }
                 _ => break,
             }
@@ -122,30 +134,25 @@ impl<'a> Parser {
             }
             Some(Token::Operator('!')) => {
                 let child = self.get_factor(tokens);
-                Ok(Box::new(Some(Node::new(
+                Ok(node!(
                     *token.context("Unexpected end of tokenlist")?,
-                    child?,
-                    Box::new(None),
-                ))))
+                    child?
+                ))
             }
-            Some(Token::Identifier(_)) => Ok(Box::new(Some(Node::new(
-                *token.context("Unexpected end of token list")?,
-                Box::new(None),
-                Box::new(None),
-            )))),
+            Some(Token::Identifier(_)) => {
+                Ok(node!(*token.context("Unexpected end of token list")?))
+            }
             _ => Err(anyhow!("Unexpected end of token list")),
         }
     }
 
     pub fn parse(&mut self) -> Result<Child> {
         let tokens = self
-            .tokenize("A+B <=>+")
+            .tokenize("A+B <=> !C+   (D ^ E)")
             .context(format!("Could not tokenize input"))?;
 
-        let tree = self
+        Ok(self
             .get_rule(&mut tokens.iter().peekable())
-            .context(format!("Could not parse"))?;
-
-        Ok(tree)
+            .context(format!("Could not parse"))?)
     }
 }
