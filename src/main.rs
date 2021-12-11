@@ -15,7 +15,10 @@ fn main() -> Result<()> {
     // println!("{:?}", input_file);
 
     let mut parser = Parser::new();
-    parser.parse("(!)+   ^  Aa   |").context(format!("Unable to parse"))?;
+	let mut tokens = parser
+		.tokenize("(!)+   ^  Aa   |")
+		.context(format!("Failed while lexing"))?;
+    parser.parse(&mut tokens).context(format!("Unable to parse"))?;
 
 
     Ok(())
