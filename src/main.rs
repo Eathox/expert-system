@@ -15,7 +15,7 @@ fn main() -> Result<()> {
     println!("{:?}", input_file);
 
     let mut parser = Parser::new();
-    parser.parse("A => B").context(format!("Unable to parse"))?;
+    parser.parse("A => B").context("Unable to parse")?;
 
     Ok(())
 }

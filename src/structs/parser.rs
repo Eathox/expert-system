@@ -143,13 +143,11 @@ impl<'a> Parser {
     }
 
     pub fn parse(&mut self, input: &str) -> Result<Branch> {
-        let tokens = self
-            .tokenize(input)
-            .context(format!("Could not tokenize input"))?;
+        let tokens = self.tokenize(input).context("Could not tokenize input")?;
 
         Ok(self
             .get_rule(&mut tokens.iter().peekable())
-            .context(format!("Could not parse"))?)
+            .context("Could not parse")?)
     }
 }
 
