@@ -71,7 +71,6 @@ impl<'a> Parser {
     pub fn tokenize(&mut self, input: &str) -> Result<Vec<Token>> {
         let mut lexer = input.chars().peekable();
         let mut tokens: Vec<Token> = Vec::new();
-
         while let Some(c) = lexer.next() {
             match c {
                 '(' | ')' => tokens.push(Parenthesis(c)),
@@ -140,13 +139,105 @@ impl<'a> Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Branch> {
+    pub fn parse(&mut self, input: &str) -> Result<Branch> {
         let tokens = self
-            .tokenize("A+B <=> !C+   (D ^ E)")
+            .tokenize(input)
             .context(format!("Could not tokenize input"))?;
 
         Ok(self
             .get_rule(&mut tokens.iter().peekable())
             .context(format!("Could not parse"))?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Parser;
+
+    #[test]
+    fn valid_input() {
+        let mut parser = Parser::new();
+
+        assert!(parser
+            .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
+            .is_ok());
+        assert_eq!(
+            parser
+                .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
+                .expect("")
+                .len(),
+            25
+        );
+        assert!(parser.tokenize("A+B          => C").is_ok());
+        assert_eq!(parser.tokenize("A+B          => C").expect("").len(), 5);
+        assert!(parser.tokenize("((A+B))          => C").is_ok());
+        assert_eq!(parser.tokenize("((A+B))          => C").expect("").len(), 9);
+        assert!(parser.tokenize("!A+!B          => (C^(!D))").is_ok());
+        assert_eq!(
+            parser
+                .tokenize("!A+!B          => (C^(!D))")
+                .expect("")
+                .len(),
+            14
+        );
+        assert!(parser.tokenize("!A<=>B").is_ok());
+        assert_eq!(parser.tokenize("!A<=>B").expect("").len(), 4);
+        assert!(parser.tokenize("!A+!B ^ C | D + E         => F").is_ok());
+        assert_eq!(
+            parser
+                .tokenize("!A+!B ^ C | D + E         => F")
+                .expect("")
+                .len(),
+            13
+        );
+        assert!(parser
+            .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
+            .is_ok());
+        assert_eq!(
+            parser
+                .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
+                .expect("")
+                .len(),
+            36
+        );
+    }
+
+    #[test]
+    fn invalid_input() {
+        let mut parser = Parser::new();
+
+        assert!(parser.tokenize("a").is_err());
+        assert!(parser.tokenize("1").is_err());
+        assert!(parser.tokenize("&").is_err());
+        assert!(parser.tokenize("A => B\0 + C").is_err());
+    }
+
+    #[test]
+    fn valid_tokenlist() {
+        let mut parser = Parser::new();
+
+        assert!(parser
+            .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
+            .is_ok());
+        assert!(parser.parse("A+B          => C").is_ok());
+        assert!(parser.parse("((A+B))          => C").is_ok());
+        assert!(parser.parse("!A+!B          => (C^(!D))").is_ok());
+        assert!(parser.parse("!A<=>B").is_ok());
+        assert!(parser.parse("!A+!B ^ C | D + E         => F").is_ok());
+        assert!(parser
+            .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
+            .is_ok());
+    }
+
+    #[test]
+    fn invalid_tokenlist() {
+        let mut parser = Parser::new();
+
+        assert!(parser.parse("=>").is_err());
+        // assert!(parser.parse("A").is_err());
+        // assert!(parser.parse("(").is_err());
+        // assert!(parser.parse(")").is_err());
+        // assert!(parser.parse("+").is_err());
+        // assert!(parser.parse("!").is_err());
     }
 }
