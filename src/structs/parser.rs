@@ -13,7 +13,7 @@ macro_rules! node {
     };
 }
 
-pub type Child = Box<Option<Node>>;
+pub type Branch = Box<Option<Node>>;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Direction {
@@ -32,12 +32,12 @@ pub enum Token {
 #[derive(Debug, Clone)]
 pub struct Node {
     token: Token,
-    left: Child,
-    right: Child,
+    left: Branch,
+    right: Branch,
 }
 
 impl Node {
-    pub fn new(token: Token, left: Child, right: Child) -> Node {
+    pub fn new(token: Token, left: Branch, right: Branch) -> Node {
         Node { token, left, right }
     }
 }
@@ -84,7 +84,7 @@ impl<'a> Parser {
         Ok(tokens)
     }
 
-    fn get_rule<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Child>
+    fn get_rule<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Branch>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -99,7 +99,7 @@ impl<'a> Parser {
         }
     }
 
-    fn get_operator<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Child>
+    fn get_operator<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Branch>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -119,7 +119,7 @@ impl<'a> Parser {
         token
     }
 
-    fn get_factor<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Child>
+    fn get_factor<I>(&mut self, tokens: &mut Peekable<I>) -> Result<Branch>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -146,7 +146,7 @@ impl<'a> Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Child> {
+    pub fn parse(&mut self) -> Result<Branch> {
         let tokens = self
             .tokenize("A+B <=> !C+   (D ^ E)")
             .context(format!("Could not tokenize input"))?;
