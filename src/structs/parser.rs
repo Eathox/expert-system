@@ -16,36 +16,6 @@ macro_rules! node {
 
 pub type Branch = Box<Option<Node>>;
 
-// pub trait FromToken {
-// 	fn get<'a, I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<Child>
-// 	where
-// 		I: Iterator<Item = Token>;
-// }
-
-// impl FromToken for Implicator {
-// 	fn get<'a, I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<Child>
-// 	where
-// 		I: Iterator<Item = Token>,
-// 	{
-// 		let mut operator = Operator('|');
-
-// 		let antecedent = operator.get(tokenlist);
-// 		// Dummy Error
-// 		File::open(&"dummy").context(format!("Could find implicator: {}", "Line 4"))?;
-
-// 		match tokenlist.peek() {
-// 			Some(Token::Operator(Operator('>'))) => {
-// 				let token = tokenlist.next().unwrap();
-// 				let mut operator = Operator('|');
-
-// 				let consequent = operator.get(tokenlist);
-// 				Ok(Box::new(Some(Node::new(token, antecedent.unwrap(), consequent.unwrap()))))
-// 			}
-// 			_ => antecedent,
-// 		}
-// 	}
-// }
-
 #[derive(Debug, Copy, Clone)]
 pub enum Direction {
 	UniDirectional,
@@ -174,7 +144,7 @@ impl<'a> Parser {
 		let tokenlist = self.tokenize(input).context("Could not tokenize input")?;
 		let tree = self
 			.get_rule(&mut tokenlist.iter().peekable())
-			.context("Could not parse")?;
+			.context("Syntactical error")?;
 		Ok(tree)
 	}
 }
@@ -263,7 +233,11 @@ mod tests {
 	fn invalid_tokenlist() {
 		let mut parser = Parser::new();
 
+		assert!(parser.parse("").is_err());
+		assert!(parser.parse(" ").is_err());
 		assert!(parser.parse("=>").is_err());
+		assert!(parser.parse("=> B").is_err());
+		assert!(parser.parse("A =>").is_err());
 		assert!(parser.parse("A").is_err());
 		assert!(parser.parse("(").is_err());
 		assert!(parser.parse(")").is_err());
@@ -279,6 +253,7 @@ mod tests {
 		assert!(parser.parse("A !=> B").is_err());
 		assert!(parser.parse("A => B!").is_err());
 		assert!(parser.parse("A++B => C").is_err());
+		assert!(parser.parse("A+|B => C").is_err());
 		assert!(parser.parse("A+B").is_err());
 	}
 }
