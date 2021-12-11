@@ -107,15 +107,10 @@ impl<'a> Parser {
         I: Iterator<Item = &'a Token>,
     {
         let mut token = self.get_factor(tokens);
-        loop {
-            match tokens.peek() {
-                Some(Operator('+')) | Some(Operator('|')) | Some(Operator('^')) => {
-                    let parent = tokens.next().context("Unexpected end of token list")?;
-                    let rhs = self.get_operator(tokens);
-                    token = Ok(node!(*parent, token?, rhs?));
-                }
-                _ => break,
-            }
+        while let Some(Operator('+')) | Some(Operator('|')) | Some(Operator('^')) = tokens.peek() {
+            let parent = tokens.next().context("Unexpected end of token list")?;
+            let rhs = self.get_operator(tokens);
+            token = Ok(node!(*parent, token?, rhs?));
         }
         token
     }
@@ -147,7 +142,7 @@ impl<'a> Parser {
 
         Ok(self
             .get_rule(&mut tokens.iter().peekable())
-            .context("Could not parse")?)
+            .context("Could not parse"))
     }
 }
 
