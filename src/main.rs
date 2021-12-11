@@ -1,4 +1,5 @@
 mod structs;
+mod errors;
 
 use anyhow::{Context, Result};
 use expert_system::*;
