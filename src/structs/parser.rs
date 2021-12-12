@@ -33,14 +33,18 @@ pub enum Token {
 
 #[derive(Debug)]
 pub struct Node {
-    token: Token,
-    left: Branch,
-    right: Branch,
+    _token: Token,
+    _left: Branch,
+    _right: Branch,
 }
 
 impl Node {
-    pub fn new(token: Token, left: Branch, right: Branch) -> Node {
-        Node { token, left, right }
+    pub fn new(_token: Token, _left: Branch, _right: Branch) -> Node {
+        Node {
+            _token,
+            _left,
+            _right,
+        }
     }
 }
 
