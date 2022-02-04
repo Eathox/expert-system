@@ -3,6 +3,8 @@ use expert_system::*;
 use indoc::indoc;
 use std::env;
 
+mod sanitize;
+
 pub const USAGE: &str = indoc! {"
     TODO: add usage
 
@@ -22,6 +24,7 @@ fn handle_cli() -> String {
 fn main() -> Result<()> {
     let input_file = handle_cli();
     let content: Vec<String> = read_file(input_file).context("Failed to read file")?;
-    println!("{:?}", content);
+    let lines = sanitize::sanitize_lines(&content);
+    println!("{:?}", lines);
     Ok(())
 }
