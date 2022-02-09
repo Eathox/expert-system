@@ -85,3 +85,55 @@ mod remove_comment {
         assert_eq!(result, "hello ");
     }
 }
+
+#[cfg(test)]
+mod sanitize_lines {
+    use super::*;
+    use anyhow::Result;
+    use expert_system::read_file;
+
+    #[test]
+    fn empty_lines() {
+        let input: Vec<&str> = vec!["  ", "", "\t"];
+        let result: Vec<String> = sanitize_lines(&input);
+
+        assert_eq!(result, Vec::<String>::new());
+    }
+
+    #[test]
+    fn empty_lines_at_end() {
+        let input: Vec<&str> = vec!["hello", "  ", "", "\t"];
+        let result: Vec<String> = sanitize_lines(&input);
+
+        assert_eq!(result, vec!["hello"]);
+    }
+
+    #[test]
+    fn merge_empty_lines() {
+        let input: Vec<&str> = vec!["hello", "  ", "", "\t", "world"];
+        let result: Vec<String> = sanitize_lines(&input);
+
+        assert_eq!(result, vec!["hello", "", "world"]);
+    }
+
+    #[test]
+    fn every_other_empty() {
+        let input: Vec<&str> = vec!["f", "", "o", "", "o"];
+        let result: Vec<String> = sanitize_lines(&input);
+
+        assert_eq!(result, vec!["f", "", "o", "", "o"]);
+    }
+
+    #[test]
+    fn example_input() -> Result<()> {
+        let input_file = common::input_file_path("sanitize_lines/example_input.txt");
+        let input: Vec<String> = read_file(input_file)?;
+
+        let expect_file = common::input_file_path("sanitize_lines/example_input_expected.txt");
+        let expected: Vec<String> = read_file(expect_file)?;
+
+        let result: Vec<String> = sanitize_lines(&input);
+        assert_eq!(result, expected);
+        Ok(())
+    }
+}
