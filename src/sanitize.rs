@@ -1,16 +1,16 @@
-fn remove_spaces(line: &String) -> String {
-    line.split_whitespace().collect()
+fn remove_spaces(line: impl AsRef<str>) -> String {
+    line.as_ref().split_whitespace().collect()
 }
 
-fn remove_comment(line: &String) -> String {
-    line.split_terminator("#").take(1).collect()
+fn remove_comment(line: impl AsRef<str>) -> String {
+    line.as_ref().split_terminator("#").take(1).collect()
 }
 
-pub fn sanitize_lines(lines: &Vec<String>) -> Vec<String> {
-    let mut result = Vec::new();
+pub fn sanitize_lines(lines: &Vec<impl AsRef<str>>) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
     let mut prev = "".to_string();
     for line in lines.iter() {
-        let mut sanitized = line.to_string();
+        let mut sanitized = line.as_ref().to_string();
         sanitized = remove_comment(&sanitized);
         sanitized = remove_spaces(&sanitized);
         if !result.is_empty() && prev.is_empty() && !sanitized.is_empty() {
@@ -34,7 +34,7 @@ mod remove_spaces {
 
     #[test]
     fn only_whitespace() {
-        let input = " \t\n\r".to_string();
+        let input = " \t\n\r";
         let result: String = remove_spaces(&input);
 
         assert_eq!(result, "");
@@ -42,7 +42,7 @@ mod remove_spaces {
 
     #[test]
     fn no_whitespace() {
-        let input = "hello-world".to_string();
+        let input = "hello-world";
         let result: String = remove_spaces(&input);
 
         assert_eq!(result, input);
@@ -50,7 +50,7 @@ mod remove_spaces {
 
     #[test]
     fn mixed() {
-        let input = "  h e l l o\nw o r l d  ".to_string();
+        let input = "  h e l l o\nw o r l d  ";
         let result: String = remove_spaces(&input);
 
         assert_eq!(result, "helloworld");
@@ -63,7 +63,7 @@ mod remove_comment {
 
     #[test]
     fn only_comment() {
-        let input = "#hello world".to_string();
+        let input = "#hello world";
         let result: String = remove_comment(&input);
 
         assert_eq!(result, "");
@@ -71,7 +71,7 @@ mod remove_comment {
 
     #[test]
     fn no_comment() {
-        let input = "hello world".to_string();
+        let input = "hello world";
         let result: String = remove_comment(&input);
 
         assert_eq!(result, input);
@@ -79,7 +79,7 @@ mod remove_comment {
 
     #[test]
     fn mixed() {
-        let input = "hello #world".to_string();
+        let input = "hello #world";
         let result: String = remove_comment(&input);
 
         assert_eq!(result, "hello ");
