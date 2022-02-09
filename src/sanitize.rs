@@ -3,10 +3,10 @@ fn remove_spaces(line: impl AsRef<str>) -> String {
 }
 
 fn remove_comment(line: impl AsRef<str>) -> String {
-    line.as_ref().split_terminator("#").take(1).collect()
+    line.as_ref().split_terminator('#').take(1).collect()
 }
 
-pub fn sanitize_lines(lines: &Vec<impl AsRef<str>>) -> Vec<String> {
+pub fn sanitize_lines(lines: &[impl AsRef<str>]) -> Vec<String> {
     let mut result: Vec<String> = Vec::new();
     let mut prev = "".to_string();
     for line in lines.iter() {
