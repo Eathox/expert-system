@@ -14,9 +14,9 @@ use thiserror::Error;
 pub enum ReadFileError {
     #[error("file contains no data")]
     Empty,
-    #[error("convert error <{0}>")]
+    #[error("failed to convert <{0}>")]
     Parse(&'static str),
-    #[error("read error")]
+    #[error("failed to read file")]
     Read { source: io::Error },
     #[error(transparent)]
     IOError(#[from] io::Error),
