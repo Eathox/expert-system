@@ -10,13 +10,13 @@ fn remove_comment(line: impl Borrow<str>) -> String {
 
 pub fn sanitize_lines(lines: &[impl Borrow<str>]) -> Vec<String> {
     let mut result: Vec<String> = Vec::new();
-    let mut prev = "".to_string();
+    let mut prev = String::new();
     for line in lines.iter() {
         let mut sanitized = line.borrow().to_string();
         sanitized = remove_comment(sanitized);
         sanitized = remove_spaces(sanitized);
         if !result.is_empty() && prev.is_empty() && !sanitized.is_empty() {
-            result.push("".to_string());
+            result.push(String::new());
         }
         if !sanitized.is_empty() {
             result.push(sanitized.clone());
