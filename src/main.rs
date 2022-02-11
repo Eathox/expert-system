@@ -5,6 +5,10 @@ use std::env;
 
 mod sanitize;
 
+mod errors {
+    pub const INPUT_FILE_READ: &str = "failed to read input file";
+}
+
 pub const USAGE: &str = indoc! {"
     TODO: add usage
 
@@ -23,7 +27,7 @@ fn handle_cli() -> String {
 
 fn main() -> Result<()> {
     let input_file = handle_cli();
-    let content: Vec<String> = read_file(input_file).context("Failed to read file")?;
+    let content: Vec<String> = read_file(input_file).context(errors::INPUT_FILE_READ)?;
     let lines = sanitize::sanitize_lines(&content);
     println!("{:?}", lines);
     Ok(())
