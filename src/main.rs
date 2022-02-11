@@ -27,7 +27,7 @@ fn handle_cli() -> String {
 
 fn main() -> Result<()> {
     let input_file = handle_cli();
-    let content: Vec<String> = read_file(input_file).context(errors::INPUT_FILE_READ)?;
+    let content: Vec<String> = read_file(&input_file).context(errors::INPUT_FILE_READ)?;
     let lines = sanitize::sanitize_lines(&content);
     println!("{:?}", lines);
     Ok(())

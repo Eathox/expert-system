@@ -129,10 +129,10 @@ mod sanitize_lines {
     #[test]
     fn example_input() -> Result<()> {
         let input_file = common::input_file_path("sanitize_lines/example_input.txt");
-        let input: Vec<String> = read_file(input_file)?;
+        let input: Vec<String> = read_file(&input_file)?;
 
         let expect_file = common::input_file_path("sanitize_lines/example_input_expected.txt");
-        let expected: Vec<String> = read_file(expect_file)?;
+        let expected: Vec<String> = read_file(&expect_file)?;
 
         let result: Vec<String> = sanitize_lines(&input);
         assert_eq!(result, expected);

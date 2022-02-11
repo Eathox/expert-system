@@ -22,7 +22,7 @@ pub enum ReadFileError {
     IOError(#[from] io::Error),
 }
 
-pub fn read_file<T: FromStr>(file: impl AsRef<Path>) -> Result<Vec<T>, ReadFileError>
+pub fn read_file<T: FromStr>(file: &impl AsRef<Path>) -> Result<Vec<T>, ReadFileError>
 where
     T::Err: fmt::Debug,
 {
@@ -55,7 +55,7 @@ mod read_file {
     #[test]
     fn text() -> Result<()> {
         let input_file = common::input_file_path("read_file/text.txt");
-        let result: Vec<String> = read_file(input_file)?;
+        let result: Vec<String> = read_file(&input_file)?;
 
         assert_eq!(result, vec!["42", "hello world", "foo bar"]);
         Ok(())
@@ -64,7 +64,7 @@ mod read_file {
     #[test]
     fn numbers() -> Result<()> {
         let input_file = common::input_file_path("read_file/numbers.txt");
-        let result: Vec<i32> = read_file(input_file)?;
+        let result: Vec<i32> = read_file(&input_file)?;
 
         assert_eq!(result, vec![1, 2, 3, 4, 5]);
         Ok(())
@@ -73,7 +73,7 @@ mod read_file {
     #[test]
     fn error_non_exist() {
         let input_file = common::input_file_path("read_file/non_exist.txt");
-        let result: Result<Vec<i32>, ReadFileError> = read_file(input_file);
+        let result: Result<Vec<i32>, ReadFileError> = read_file(&input_file);
         assert!(matches!(
             result,
             Err(crate::ReadFileError::Read { source: _ })
@@ -83,14 +83,14 @@ mod read_file {
     #[test]
     fn error_empty() {
         let input_file = common::input_file_path("read_file/empty.txt");
-        let result: Result<Vec<i32>, ReadFileError> = read_file(input_file);
+        let result: Result<Vec<i32>, ReadFileError> = read_file(&input_file);
         assert!(matches!(result, Err(crate::ReadFileError::Empty)))
     }
 
     #[test]
     fn error_parse() {
         let input_file = common::input_file_path("read_file/foobar.txt");
-        let result: Result<Vec<i32>, ReadFileError> = read_file(input_file);
+        let result: Result<Vec<i32>, ReadFileError> = read_file(&input_file);
         assert!(matches!(result, Err(crate::ReadFileError::Parse("i32"))))
     }
 }
