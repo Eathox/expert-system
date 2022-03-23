@@ -1,6 +1,6 @@
 mod parser;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use expert_system::*;
 use parser::RuleParser;
 use std::env;

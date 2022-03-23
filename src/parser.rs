@@ -1,4 +1,6 @@
 use anyhow::{anyhow, Context, Result};
+use std::collections::HashSet;
+use std::fmt;
 use std::iter::Peekable;
 use Token::*;
 
@@ -13,7 +15,6 @@ pub enum Token {
     Implicator(Direction),
     Operator(char),
     Parenthesis(char),
-    Attribute(char),
     Bool(bool),
 }
 
@@ -67,13 +68,11 @@ impl<'a> RuleParser {
         if let Some(implicator) = tokenlist.next() {
             let consequent = self.get_operator(tokenlist)?;
             match implicator {
-                Implicator(direction) => {
-                    match direction {
-                        Direction::UniDirectional => Ok(!antecedent > consequent),
-                        Direction::BiDirectional => Ok(antecedent == consequent),
-                    }
-                }
-                _ => Err(anyhow!("No implicator found"))
+                Implicator(direction) => match direction {
+                    Direction::UniDirectional => Ok(!antecedent | consequent),
+                    Direction::BiDirectional => Ok(antecedent == consequent),
+                },
+                _ => Err(anyhow!("No implicator found")),
             }
         } else {
             Err(anyhow!("Unexpected end of token list"))
@@ -86,11 +85,10 @@ impl<'a> RuleParser {
     {
         let mut node = self.get_factor(tokenlist);
         while let Some(Operator(op)) = tokenlist.peek() {
-            let res = self.get_operator(tokenlist)?;
-            node = match op {
-                '+' => Ok(node? & res),
-                '|' => Ok(node? | res),
-                '^' => Ok(node? ^ res),
+            node = match tokenlist.next() {
+                Some(Operator('+')) => Ok(node? & self.get_factor(tokenlist)?),
+                Some(Operator('|')) => Ok(node? | self.get_factor(tokenlist)?),
+                Some(Operator('^')) => Ok(node? ^ self.get_factor(tokenlist)?),
                 _ => Err(anyhow!("Found unexpected operator: {:?}", op)),
             }
         }
@@ -117,39 +115,13 @@ impl<'a> RuleParser {
 
     pub fn evaluate(&mut self, input: &str) -> Result<bool> {
         let tokenlist = self.tokenize(input).context("Could not tokenize input")?;
-        let tree = self
+        Ok(self
             .get_rule(&mut tokenlist.iter().peekable())
-            .context("Syntactical error")?;
-        Ok(tree)
-    }
-
-    pub fn truth_table_from(&mut self, input: &str) -> Result<()> {
-        let mut permutationlist = PermutationList::new(input);
-        while let Some(permutation) = permutationlist.next() {
-            let res = self.evaluate(&permutation)?;
-            println!("res: {:?}", res);
-        }
-        Ok(())
+            .context("Syntactical error")?)
     }
 }
 
-#[derive(PartialEq)]
-pub struct TruthTable {
-    pub variables: Vec<char>,
-    pub results: Vec<bool>,
-}
-
-impl TruthTable {
-    pub fn new() -> Self {
-        TruthTable {
-            variables: Vec::new(),
-            results: Vec::new(),
-        }
-    }
-}
-
-use std::collections::HashSet;
-
+// PermutationList is an iterator that iterates over all permutations of a rule input string
 pub struct PermutationList<'a> {
     formula: &'a str,
     pub variables: Vec<char>,
@@ -199,17 +171,93 @@ impl Iterator for PermutationList<'_> {
     }
 }
 
+// TruthTable struct holds the truth table data of an input rule
+#[derive(PartialEq)]
+pub struct TruthTable {
+    pub variables: Vec<char>,
+    pub results: Vec<bool>,
+}
+
+impl TruthTable {
+    pub fn new() -> Self {
+        TruthTable {
+            variables: Vec::new(),
+            results: Vec::new(),
+        }
+    }
+}
+
+impl From<PermutationList<'_>> for TruthTable {
+    fn from(mut permutationlist: PermutationList) -> Self {
+        let mut table = Self::new();
+        let mut parser = RuleParser::new();
+        while let Some(permutation) = permutationlist.next() {
+            table.results.push(parser.evaluate(&permutation).unwrap());
+        }
+        table.variables.append(&mut permutationlist.variables);
+        table
+    }
+}
+
+impl fmt::Display for TruthTable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let len = self.variables.len();
+        for v in &self.variables {
+            write!(f, "| {} ", v)?;
+        }
+        write!(f, "| = |\n")?;
+        write!(f, "{}|\n", "|---".repeat(len + 1))?;
+        for (i, result) in self.results.iter().enumerate() {
+            for b in 0..len {
+                write!(
+                    f,
+                    "| {} ",
+                    if i & (1 << (len - 1 - b)) == 0 { 0 } else { 1 }
+                )?
+            }
+            write!(f, "| {} |\n", if *result { 1 } else { 0 })?;
+        }
+        write!(f, "")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn temp() {
-        let mut parser = RuleParser::new();
+    fn test_permutationlist() {
+        let mut list = PermutationList::new("A + B <=> C");
 
-        let res = parser.truth_table_from("A => B");
+        assert_eq!(Some(String::from("0 + 0 <=> 0")), list.next());
+        assert_eq!(Some(String::from("0 + 0 <=> 1")), list.next());
+        assert_eq!(Some(String::from("0 + 1 <=> 0")), list.next());
+        assert_eq!(Some(String::from("0 + 1 <=> 1")), list.next());
+        assert_eq!(Some(String::from("1 + 0 <=> 0")), list.next());
+        assert_eq!(Some(String::from("1 + 0 <=> 1")), list.next());
+        assert_eq!(Some(String::from("1 + 1 <=> 0")), list.next());
+        assert_eq!(Some(String::from("1 + 1 <=> 1")), list.next());
+        assert_eq!(None, list.next());
+    }
 
-        println!("{:?}", res);
+    #[test]
+    fn test_truthtable() {
+        let table = TruthTable::from(PermutationList::new("A + B <=> C"));
+        assert_eq!(table.variables, vec!['A', 'B', 'C']);
+        assert_eq!(
+            table.results,
+            vec![true, false, true, false, true, false, false, true]
+        );
+
+        let table = TruthTable::from(PermutationList::new("A + D <=> C | X"));
+        assert_eq!(table.variables, vec!['A', 'C', 'D', 'X']);
+        assert_eq!(
+            table.results,
+            vec![
+                true, false, true, false, false, false, false, false, true, false, false, true,
+                false, false, true, true
+            ]
+        );
     }
 
     // #[test]
