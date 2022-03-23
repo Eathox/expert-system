@@ -2,8 +2,8 @@ mod parser;
 
 use anyhow::{Context, Result};
 use expert_system::*;
-use std::env;
 use parser::RuleParser;
+use std::env;
 
 fn main() -> Result<()> {
     if env::args().len() != 2 {
