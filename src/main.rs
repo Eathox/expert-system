@@ -1,4 +1,3 @@
-mod errors;
 mod structs;
 
 use anyhow::{Context, Result};

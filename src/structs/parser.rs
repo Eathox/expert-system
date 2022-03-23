@@ -1,4 +1,3 @@
-use crate::errors::*;
 use anyhow::{anyhow, Context, Result};
 use std::iter::Peekable;
 use Token::*;
@@ -64,12 +63,12 @@ impl<'a> Parser {
                 ('=', '>') => Ok(Direction::UniDirectional),
                 ('<', '=') => match lexer.next() {
                     Some('>') => Ok(Direction::BiDirectional),
-                    _ => Err(anyhow!(IMPLICATOR_ERR)),
+                    _ => Err(anyhow!("Unable to finish lexing inplicator")),
                 },
-                _ => Err(anyhow!(IMPLICATOR_ERR)),
+                _ => Err(anyhow!("Unable to finish lexing inplicator")),
             }
         } else {
-            Err(anyhow!(IMPLICATOR_ERR))
+            Err(anyhow!("Unable to finish lexing inplicator"))
         }
     }
 
@@ -83,7 +82,7 @@ impl<'a> Parser {
                 '=' | '<' => tokenlist.push(Implicator(self.get_direction(&mut lexer, c)?)),
                 'A'..='Z' => tokenlist.push(Attribute(c)),
                 c if c.is_whitespace() => {}
-                _ => return Err(anyhow!("{}{}", UNEXP_CHAR_ERR, c)),
+                _ => return Err(anyhow!("Unexpected character: {}", c)),
             }
         }
         Ok(tokenlist)
@@ -96,14 +95,14 @@ impl<'a> Parser {
         let antecedent = self.get_operator(tokenlist);
         match tokenlist.peek() {
             Some(Implicator(_)) => {
-                let token = tokenlist.next().context(UNEXP_END_ERR)?;
+                let token = tokenlist.next().context("Unexpected end of token list")?;
                 let consequent = self.get_operator(tokenlist);
                 match tokenlist.next() {
                     None => Ok(node!(*token, antecedent?, consequent?)),
-                    Some(t) => Err(anyhow!("{}{:?}", UNEXP_TOKEN_ERR, t)),
+                    Some(t) => Err(anyhow!("Found unexpected token: {:?}", t)),
                 }
             }
-            _ => Err(anyhow!(MISSING_IMPLICATOR_ERR)),
+            _ => Err(anyhow!("No implicator found")),
         }
     }
 
@@ -115,7 +114,7 @@ impl<'a> Parser {
         while let Some(Operator('+')) | Some(Operator('|')) | Some(Operator('^')) = tokenlist.peek()
         {
             node = Ok(node!(
-                *tokenlist.next().context(UNEXP_END_ERR)?,
+                *tokenlist.next().context("Unexpected end of token list")?,
                 node?,
                 self.get_operator(tokenlist)?
             ));
@@ -133,23 +132,23 @@ impl<'a> Parser {
                 let node = self.get_operator(tokenlist);
                 match tokenlist.next() {
                     Some(Parenthesis(')')) => node,
-                    _ => Err(anyhow!(MISSING_PAREN_ERR)),
+                    _ => Err(anyhow!("Missing closing parenthesis")),
                 }
             }
             Some(Operator('!')) => Ok(node!(
-                *token.context(UNEXP_END_ERR)?,
+                *token.context("Unexpected end of token list")?,
                 self.get_factor(tokenlist)?
             )),
-            Some(Attribute(_)) => Ok(node!(*token.context(UNEXP_END_ERR)?)),
-            _ => Err(anyhow!(UNEXP_END_ERR)),
+            Some(Attribute(_)) => Ok(node!(*token.context("Unexpected end of token list")?)),
+            _ => Err(anyhow!("Unexpected end of token list")),
         }
     }
 
     pub fn parse(&mut self, input: &str) -> Result<Branch> {
-        let tokenlist = self.tokenize(input).context(TOKENIZATION_ERR)?;
+        let tokenlist = self.tokenize(input).context("Could not tokenize input")?;
         let tree = self
             .get_rule(&mut tokenlist.iter().peekable())
-            .context(SYNTAX_ERR)?;
+            .context("Syntactical error")?;
         Ok(tree)
     }
 }
