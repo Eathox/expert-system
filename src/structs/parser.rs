@@ -155,7 +155,7 @@ impl<'a> Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::Parser;
+    use super::*;
 
     #[test]
     fn valid_input() {
