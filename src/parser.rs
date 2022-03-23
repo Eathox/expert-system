@@ -115,9 +115,8 @@ impl<'a> RuleParser {
 
     pub fn evaluate(&mut self, input: &str) -> Result<bool> {
         let tokenlist = self.tokenize(input).context("Could not tokenize input")?;
-        Ok(self
-            .get_rule(&mut tokenlist.iter().peekable())
-            .context("Syntactical error")?)
+        self.get_rule(&mut tokenlist.iter().peekable())
+            .context("Syntactical error")
     }
 }
 
@@ -138,7 +137,7 @@ impl PermutationList<'_> {
                 _ => None,
             })
             .collect::<Vec<char>>();
-        variables.sort();
+        variables.sort_unstable();
         PermutationList {
             formula,
             variables,
@@ -158,7 +157,7 @@ impl Iterator for PermutationList<'_> {
             for (i, c) in self.variables.iter().enumerate() {
                 permutation = permutation.replace(
                     &c.to_string(),
-                    if self.size & (1 << self.variables.len() - 1 - i) == 0 {
+                    if self.size & (1 << (self.variables.len() - 1 - i)) == 0 {
                         "0"
                     } else {
                         "1"
@@ -191,7 +190,7 @@ impl From<PermutationList<'_>> for TruthTable {
     fn from(mut permutationlist: PermutationList) -> Self {
         let mut table = Self::new();
         let mut parser = RuleParser::new();
-        while let Some(permutation) = permutationlist.next() {
+        for permutation in permutationlist.by_ref() {
             table.results.push(parser.evaluate(&permutation).unwrap());
         }
         table.variables.append(&mut permutationlist.variables);
@@ -205,8 +204,8 @@ impl fmt::Display for TruthTable {
         for v in &self.variables {
             write!(f, "| {} ", v)?;
         }
-        write!(f, "| = |\n")?;
-        write!(f, "{}|\n", "|---".repeat(len + 1))?;
+        writeln!(f, "| = |")?;
+        writeln!(f, "{}|", "|---".repeat(len + 1))?;
         for (i, result) in self.results.iter().enumerate() {
             for b in 0..len {
                 write!(
@@ -215,7 +214,7 @@ impl fmt::Display for TruthTable {
                     if i & (1 << (len - 1 - b)) == 0 { 0 } else { 1 }
                 )?
             }
-            write!(f, "| {} |\n", if *result { 1 } else { 0 })?;
+            writeln!(f, "| {} |", if *result { 1 } else { 0 })?;
         }
         write!(f, "")
     }
