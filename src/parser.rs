@@ -2,20 +2,6 @@ use anyhow::{anyhow, Context, Result};
 use std::iter::Peekable;
 use Token::*;
 
-macro_rules! node {
-    ($token:expr) => {
-        node!($token, Box::new(None), Box::new(None))
-    };
-    ($token:expr, $left:expr) => {
-        node!($token, $left, Box::new(None))
-    };
-    ($token:expr, $left:expr, $right:expr) => {
-        Box::new(Some(Node::new($token, $left, $right)))
-    };
-}
-
-pub type Branch = Box<Option<Node>>;
-
 #[derive(Debug, Copy, Clone)]
 pub enum Direction {
     UniDirectional,
@@ -28,23 +14,7 @@ pub enum Token {
     Operator(char),
     Parenthesis(char),
     Attribute(char),
-}
-
-#[derive(Debug)]
-pub struct Node {
-    _token: Token,
-    _left: Branch,
-    _right: Branch,
-}
-
-impl Node {
-    pub fn new(_token: Token, _left: Branch, _right: Branch) -> Node {
-        Node {
-            _token,
-            _left,
-            _right,
-        }
-    }
+    Bool(bool),
 }
 
 pub struct RuleParser;
@@ -80,7 +50,8 @@ impl<'a> RuleParser {
                 '(' | ')' => tokenlist.push(Parenthesis(c)),
                 '!' | '+' | '|' | '^' => tokenlist.push(Operator(c)),
                 '=' | '<' => tokenlist.push(Implicator(self.get_direction(&mut lexer, c)?)),
-                'A'..='Z' => tokenlist.push(Attribute(c)),
+                '0' => tokenlist.push(Bool(false)),
+                '1' => tokenlist.push(Bool(true)),
                 c if c.is_whitespace() => {}
                 _ => return Err(anyhow!("Unexpected character: {}", c)),
             }
@@ -88,68 +59,143 @@ impl<'a> RuleParser {
         Ok(tokenlist)
     }
 
-    fn get_rule<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<Branch>
+    fn get_rule<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
-        let antecedent = self.get_operator(tokenlist);
-        match tokenlist.peek() {
-            Some(Implicator(_)) => {
-                let token = tokenlist.next().context("Unexpected end of token list")?;
-                let consequent = self.get_operator(tokenlist);
-                match tokenlist.next() {
-                    None => Ok(node!(*token, antecedent?, consequent?)),
-                    Some(t) => Err(anyhow!("Found unexpected token: {:?}", t)),
+        let antecedent = self.get_operator(tokenlist)?;
+        if let Some(implicator) = tokenlist.next() {
+            let consequent = self.get_operator(tokenlist)?;
+            match implicator {
+                Implicator(direction) => {
+                    match direction {
+                        Direction::UniDirectional => Ok(!antecedent > consequent),
+                        Direction::BiDirectional => Ok(antecedent == consequent),
+                    }
                 }
+                _ => Err(anyhow!("No implicator found"))
             }
-            _ => Err(anyhow!("No implicator found")),
+        } else {
+            Err(anyhow!("Unexpected end of token list"))
         }
     }
 
-    fn get_operator<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<Branch>
+    fn get_operator<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
         let mut node = self.get_factor(tokenlist);
-        while let Some(Operator('+')) | Some(Operator('|')) | Some(Operator('^')) = tokenlist.peek()
-        {
-            node = Ok(node!(
-                *tokenlist.next().context("Unexpected end of token list")?,
-                node?,
-                self.get_operator(tokenlist)?
-            ));
+        while let Some(Operator(op)) = tokenlist.peek() {
+            let res = self.get_operator(tokenlist)?;
+            node = match op {
+                '+' => Ok(node? & res),
+                '|' => Ok(node? | res),
+                '^' => Ok(node? ^ res),
+                _ => Err(anyhow!("Found unexpected operator: {:?}", op)),
+            }
         }
         node
     }
 
-    fn get_factor<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<Branch>
+    fn get_factor<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
-        let token = tokenlist.next();
-        match token {
+        match tokenlist.next() {
             Some(Parenthesis('(')) => {
-                let node = self.get_operator(tokenlist);
+                let res = self.get_operator(tokenlist);
                 match tokenlist.next() {
-                    Some(Parenthesis(')')) => node,
+                    Some(Parenthesis(')')) => res,
                     _ => Err(anyhow!("Missing closing parenthesis")),
                 }
             }
-            Some(Operator('!')) => Ok(node!(
-                *token.context("Unexpected end of token list")?,
-                self.get_factor(tokenlist)?
-            )),
-            Some(Attribute(_)) => Ok(node!(*token.context("Unexpected end of token list")?)),
+            Some(Operator('!')) => Ok(!self.get_factor(tokenlist)?),
+            Some(Bool(b)) => Ok(*b),
             _ => Err(anyhow!("Unexpected end of token list")),
         }
     }
 
-    pub fn parse(&mut self, input: &str) -> Result<Branch> {
+    pub fn evaluate(&mut self, input: &str) -> Result<bool> {
         let tokenlist = self.tokenize(input).context("Could not tokenize input")?;
         let tree = self
             .get_rule(&mut tokenlist.iter().peekable())
             .context("Syntactical error")?;
         Ok(tree)
+    }
+
+    pub fn truth_table_from(&mut self, input: &str) -> Result<()> {
+        let mut permutationlist = PermutationList::new(input);
+        while let Some(permutation) = permutationlist.next() {
+            let res = self.evaluate(&permutation)?;
+            println!("res: {:?}", res);
+        }
+        Ok(())
+    }
+}
+
+#[derive(PartialEq)]
+pub struct TruthTable {
+    pub variables: Vec<char>,
+    pub results: Vec<bool>,
+}
+
+impl TruthTable {
+    pub fn new() -> Self {
+        TruthTable {
+            variables: Vec::new(),
+            results: Vec::new(),
+        }
+    }
+}
+
+use std::collections::HashSet;
+
+pub struct PermutationList<'a> {
+    formula: &'a str,
+    pub variables: Vec<char>,
+    size: usize,
+}
+
+impl PermutationList<'_> {
+    pub fn new(formula: &str) -> PermutationList {
+        let mut set = HashSet::new();
+        let mut variables = formula
+            .chars()
+            .filter_map(|c| match c {
+                'A'..='Z' if set.insert(c) => Some(c),
+                _ => None,
+            })
+            .collect::<Vec<char>>();
+        variables.sort();
+        PermutationList {
+            formula,
+            variables,
+            size: 0,
+        }
+    }
+}
+
+impl Iterator for PermutationList<'_> {
+    type Item = String;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.size == 1 << self.variables.len() {
+            None
+        } else {
+            let mut permutation = String::from(self.formula);
+            for (i, c) in self.variables.iter().enumerate() {
+                permutation = permutation.replace(
+                    &c.to_string(),
+                    if self.size & (1 << self.variables.len() - 1 - i) == 0 {
+                        "0"
+                    } else {
+                        "1"
+                    },
+                );
+            }
+            self.size += 1;
+            Some(permutation)
+        }
     }
 }
 
@@ -158,106 +204,115 @@ mod tests {
     use super::*;
 
     #[test]
-    fn valid_input() {
+    fn temp() {
         let mut parser = RuleParser::new();
 
-        assert!(parser
-            .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
-            .is_ok());
-        assert_eq!(
-            parser
-                .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
-                .expect("")
-                .len(),
-            25
-        );
-        assert!(parser.tokenize("A+B          => C").is_ok());
-        assert_eq!(parser.tokenize("A+B          => C").expect("").len(), 5);
-        assert!(parser.tokenize("((A+B))          => C").is_ok());
-        assert_eq!(parser.tokenize("((A+B))          => C").expect("").len(), 9);
-        assert!(parser.tokenize("!A+!B          => (C^(!D))").is_ok());
-        assert_eq!(
-            parser
-                .tokenize("!A+!B          => (C^(!D))")
-                .expect("")
-                .len(),
-            14
-        );
-        assert!(parser.tokenize("!A<=>B").is_ok());
-        assert_eq!(parser.tokenize("!A<=>B").expect("").len(), 4);
-        assert!(parser.tokenize("!A+!B ^ C | D + E         => F").is_ok());
-        assert_eq!(
-            parser
-                .tokenize("!A+!B ^ C | D + E         => F")
-                .expect("")
-                .len(),
-            13
-        );
-        assert!(parser
-            .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
-            .is_ok());
-        assert_eq!(
-            parser
-                .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
-                .expect("")
-                .len(),
-            36
-        );
+        let res = parser.truth_table_from("A => B");
+
+        println!("{:?}", res);
     }
 
-    #[test]
-    fn invalid_input() {
-        let mut parser = RuleParser::new();
+    // #[test]
+    // fn valid_input() {
+    //     let mut parser = RuleParser::new();
 
-        assert!(parser.tokenize("a").is_err());
-        assert!(parser.tokenize("1").is_err());
-        assert!(parser.tokenize("&").is_err());
-        assert!(parser.tokenize("A => B\0 + C").is_err());
-    }
+    //     assert!(parser
+    //         .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
+    //         .is_ok());
+    //     assert_eq!(
+    //         parser
+    //             .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
+    //             .expect("")
+    //             .len(),
+    //         25
+    //     );
+    //     assert!(parser.tokenize("A+B          => C").is_ok());
+    //     assert_eq!(parser.tokenize("A+B          => C").expect("").len(), 5);
+    //     assert!(parser.tokenize("((A+B))          => C").is_ok());
+    //     assert_eq!(parser.tokenize("((A+B))          => C").expect("").len(), 9);
+    //     assert!(parser.tokenize("!A+!B          => (C^(!D))").is_ok());
+    //     assert_eq!(
+    //         parser
+    //             .tokenize("!A+!B          => (C^(!D))")
+    //             .expect("")
+    //             .len(),
+    //         14
+    //     );
+    //     assert!(parser.tokenize("!A<=>B").is_ok());
+    //     assert_eq!(parser.tokenize("!A<=>B").expect("").len(), 4);
+    //     assert!(parser.tokenize("!A+!B ^ C | D + E         => F").is_ok());
+    //     assert_eq!(
+    //         parser
+    //             .tokenize("!A+!B ^ C | D + E         => F")
+    //             .expect("")
+    //             .len(),
+    //         13
+    //     );
+    //     assert!(parser
+    //         .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
+    //         .is_ok());
+    //     assert_eq!(
+    //         parser
+    //             .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
+    //             .expect("")
+    //             .len(),
+    //         36
+    //     );
+    // }
 
-    #[test]
-    fn valid_tokenlist() {
-        let mut parser = RuleParser::new();
+    // #[test]
+    // fn invalid_input() {
+    //     let mut parser = RuleParser::new();
 
-        assert!(parser
-            .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
-            .is_ok());
-        assert!(parser.parse("A+B          => C").is_ok());
-        assert!(parser.parse("((A+B))          => C").is_ok());
-        assert!(parser.parse("!A+!B          => (C^(!D))").is_ok());
-        assert!(parser.parse("!A<=>B").is_ok());
-        assert!(parser.parse("!A+!B ^ C | D + E         => F").is_ok());
-        assert!(parser
-            .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
-            .is_ok());
-        assert!(parser.parse("A => !!!B").is_ok());
-    }
+    //     assert!(parser.tokenize("a").is_err());
+    //     assert!(parser.tokenize("1").is_err());
+    //     assert!(parser.tokenize("&").is_err());
+    //     assert!(parser.tokenize("A => B\0 + C").is_err());
+    // }
 
-    #[test]
-    fn invalid_tokenlist() {
-        let mut parser = RuleParser::new();
+    // #[test]
+    // fn valid_tokenlist() {
+    //     let mut parser = RuleParser::new();
 
-        assert!(parser.parse("").is_err());
-        assert!(parser.parse(" ").is_err());
-        assert!(parser.parse("=>").is_err());
-        assert!(parser.parse("=> B").is_err());
-        assert!(parser.parse("A =>").is_err());
-        assert!(parser.parse("A").is_err());
-        assert!(parser.parse("(").is_err());
-        assert!(parser.parse(")").is_err());
-        assert!(parser.parse("+").is_err());
-        assert!(parser.parse("!").is_err());
-        assert!(parser.parse("A => B => C").is_err());
-        assert!(parser.parse("(A + (B!)C").is_err());
-        assert!(parser.parse("A + (B!)C").is_err());
-        assert!(parser.parse("A = B").is_err());
-        assert!(parser
-            .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H))         ^ I | (J + (!K))")
-            .is_err());
-        assert!(parser.parse("A !=> B").is_err());
-        assert!(parser.parse("A => B!").is_err());
-        assert!(parser.parse("A++B => C").is_err());
-        assert!(parser.parse("A+|B => C").is_err());
-        assert!(parser.parse("A+B").is_err());
-    }
+    //     assert!(parser
+    //         .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
+    //         .is_ok());
+    //     assert!(parser.parse("A+B          => C").is_ok());
+    //     assert!(parser.parse("((A+B))          => C").is_ok());
+    //     assert!(parser.parse("!A+!B          => (C^(!D))").is_ok());
+    //     assert!(parser.parse("!A<=>B").is_ok());
+    //     assert!(parser.parse("!A+!B ^ C | D + E         => F").is_ok());
+    //     assert!(parser
+    //         .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))         ^ I | (J + (!K))")
+    //         .is_ok());
+    //     assert!(parser.parse("A => !!!B").is_ok());
+    // }
+
+    // #[test]
+    // fn invalid_tokenlist() {
+    //     let mut parser = RuleParser::new();
+
+    //     assert!(parser.parse("").is_err());
+    //     assert!(parser.parse(" ").is_err());
+    //     assert!(parser.parse("=>").is_err());
+    //     assert!(parser.parse("=> B").is_err());
+    //     assert!(parser.parse("A =>").is_err());
+    //     assert!(parser.parse("A").is_err());
+    //     assert!(parser.parse("(").is_err());
+    //     assert!(parser.parse(")").is_err());
+    //     assert!(parser.parse("+").is_err());
+    //     assert!(parser.parse("!").is_err());
+    //     assert!(parser.parse("A => B => C").is_err());
+    //     assert!(parser.parse("(A + (B!)C").is_err());
+    //     assert!(parser.parse("A + (B!)C").is_err());
+    //     assert!(parser.parse("A = B").is_err());
+    //     assert!(parser
+    //         .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H))         ^ I | (J + (!K))")
+    //         .is_err());
+    //     assert!(parser.parse("A !=> B").is_err());
+    //     assert!(parser.parse("A => B!").is_err());
+    //     assert!(parser.parse("A++B => C").is_err());
+    //     assert!(parser.parse("A+|B => C").is_err());
+    //     assert!(parser.parse("A+B").is_err());
+    // }
 }
