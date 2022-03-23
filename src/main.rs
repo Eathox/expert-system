@@ -1,9 +1,9 @@
-mod structs;
+mod parser;
 
 use anyhow::{Context, Result};
 use expert_system::*;
 use std::env;
-use structs::parser::*;
+use parser::RuleParser;
 
 fn main() -> Result<()> {
     if env::args().len() != 2 {
@@ -15,6 +15,8 @@ fn main() -> Result<()> {
     println!("{:?}", input_file);
 
     let mut _parser = RuleParser::new();
+
+    let temp = _parser.parse("A => B");
 
     Ok(())
 }
