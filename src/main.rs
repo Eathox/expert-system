@@ -16,7 +16,5 @@ fn main() -> Result<()> {
 
     let mut _parser = RuleParser::new();
 
-    let temp = _parser.parse("A => B");
-
     Ok(())
 }
