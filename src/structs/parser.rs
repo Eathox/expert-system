@@ -47,11 +47,11 @@ impl Node {
     }
 }
 
-pub struct Parser;
+pub struct RuleParser;
 
-impl<'a> Parser {
+impl<'a> RuleParser {
     pub fn new() -> Self {
-        Parser {}
+        RuleParser {}
     }
 
     fn get_direction<I>(&mut self, lexer: &mut Peekable<I>, c: char) -> Result<Direction>
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn valid_input() {
-        let mut parser = Parser::new();
+        let mut parser = RuleParser::new();
 
         assert!(parser
             .tokenize("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn invalid_input() {
-        let mut parser = Parser::new();
+        let mut parser = RuleParser::new();
 
         assert!(parser.tokenize("a").is_err());
         assert!(parser.tokenize("1").is_err());
@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn valid_tokenlist() {
-        let mut parser = Parser::new();
+        let mut parser = RuleParser::new();
 
         assert!(parser
             .parse("A+B <=> !C+   ((D ^ E) + (F | (G ^ !H)))")
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn invalid_tokenlist() {
-        let mut parser = Parser::new();
+        let mut parser = RuleParser::new();
 
         assert!(parser.parse("").is_err());
         assert!(parser.parse(" ").is_err());

@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     let input_file = env::args().nth(1).unwrap();
     println!("{:?}", input_file);
 
-    let mut _parser = Parser::new();
+    let mut _parser = RuleParser::new();
 
     Ok(())
 }
