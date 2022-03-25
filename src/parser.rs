@@ -120,15 +120,15 @@ impl<'a> RuleParser {
     }
 }
 
-// PermutationList is an iterator that iterates over all permutations of a rule input string
-pub struct PermutationList<'a> {
+// PermutationIter is an iterator that iterates over all permutations of a rule input string
+pub struct PermutationIter<'a> {
     formula: &'a str,
     pub variables: Vec<char>,
     size: usize,
 }
 
-impl PermutationList<'_> {
-    pub fn new(formula: &str) -> PermutationList {
+impl PermutationIter<'_> {
+    pub fn new(formula: &str) -> PermutationIter {
         let mut set = HashSet::new();
         let mut variables = formula
             .chars()
@@ -138,7 +138,7 @@ impl PermutationList<'_> {
             })
             .collect::<Vec<char>>();
         variables.sort_unstable();
-        PermutationList {
+        PermutationIter {
             formula,
             variables,
             size: 0,
@@ -146,7 +146,7 @@ impl PermutationList<'_> {
     }
 }
 
-impl Iterator for PermutationList<'_> {
+impl Iterator for PermutationIter<'_> {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -186,8 +186,8 @@ impl TruthTable {
     }
 }
 
-impl From<PermutationList<'_>> for TruthTable {
-    fn from(mut permutationlist: PermutationList) -> Self {
+impl From<PermutationIter<'_>> for TruthTable {
+    fn from(mut permutationlist: PermutationIter) -> Self {
         let mut table = Self::new();
         let mut parser = RuleParser::new();
         for permutation in permutationlist.by_ref() {
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_permutationlist() {
-        let mut list = PermutationList::new("A + B <=> C");
+        let mut list = PermutationIter::new("A + B <=> C");
 
         assert_eq!(Some(String::from("0 + 0 <=> 0")), list.next());
         assert_eq!(Some(String::from("0 + 0 <=> 1")), list.next());
@@ -241,14 +241,14 @@ mod tests {
 
     #[test]
     fn test_truthtable() {
-        let table = TruthTable::from(PermutationList::new("A + B <=> C"));
+        let table = TruthTable::from(PermutationIter::new("A + B <=> C"));
         assert_eq!(table.variables, vec!['A', 'B', 'C']);
         assert_eq!(
             table.results,
             vec![true, false, true, false, true, false, false, true]
         );
 
-        let table = TruthTable::from(PermutationList::new("A + D <=> C | X"));
+        let table = TruthTable::from(PermutationIter::new("A + D <=> C | X"));
         assert_eq!(table.variables, vec!['A', 'C', 'D', 'X']);
         assert_eq!(
             table.results,
@@ -257,6 +257,7 @@ mod tests {
                 false, false, true, true
             ]
         );
+
     }
 
     // #[test]
