@@ -186,7 +186,7 @@ impl Iterator for PermutationIter<'_> {
 // `0 => 1` implies index 0b01, results[1]
 // `1 => 0` implies index 0b10, results[2]
 // `1 => 1` implies index 0b11, results[3]
-#[derive(PartialEq)]
+#[derive(Default, PartialEq)]
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
