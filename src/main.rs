@@ -20,25 +20,16 @@ impl TryFrom<PathBuf> for Input {
             .context(format!("Failed to read input file: '{:?}'", file_path))?;
         let lines = sanitize::sanitize_lines(&content);
 
-        let mut sections = lines.split(|s| s.is_empty());
-        let rules = sections
-            .next()
-            .context(format!("Missing rules in: {:?}", file_path))?;
-        let facts = sections
-            .next()
-            .context(format!("Missing facts in: {:?}", file_path))?;
-        let queries = sections
-            .next()
-            .context(format!("Missing queries in: {:?}", file_path))?;
-        if sections.next().is_some() {
-            return Err(anyhow!("Too many sections in input"));
+        let sections: Vec<&[String]> = lines.split(|s| s.is_empty()).collect::<Vec<_>>();
+        match sections.len() {
+            3 => Ok(Input {
+                rules: sections[0].to_vec(),
+                facts: sections[1].to_vec(),
+                queries: sections[2].to_vec(),
+            }),
+            c if c < 3 => Err(anyhow!("Too few sections in input file")),
+            _ => Err(anyhow!("Too many sections in input file")),
         }
-
-        Ok(Input {
-            rules: rules.to_vec(),
-            facts: facts.to_vec(),
-            queries: queries.to_vec(),
-        })
     }
 }
 
@@ -64,4 +55,48 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+#[path = "../tests/test_utils/mod.rs"]
+pub mod test_utils;
+
+#[cfg(test)]
+mod input {
+    use super::*;
+
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn empty() {
+        let input_file = test_utils::input_file_path("integration_test/empty.txt");
+        let result = Input::try_from(PathBuf::from(input_file));
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Too few sections in input file"
+        );
+    }
+
+    #[test]
+    fn to_few_sections() {
+        let input_file = test_utils::input_file_path("integration_test/to_few_sections.txt");
+        let result = Input::try_from(PathBuf::from(input_file));
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Too few sections in input file"
+        );
+    }
+
+    #[test]
+    fn to_many_sections() {
+        let input_file = test_utils::input_file_path("integration_test/to_many_sections.txt");
+        let result = Input::try_from(PathBuf::from(input_file));
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Too many sections in input file"
+        );
+    }
 }
