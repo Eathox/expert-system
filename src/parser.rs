@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context, Result};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::rc::Rc;
 use std::iter::Peekable;
 use Token::*;
 
@@ -184,7 +185,7 @@ impl Iterator for PermutationIter<'_> {
 // `0 => 1` implies index 0b01, results[1]
 // `1 => 0` implies index 0b10, results[2]
 // `1 => 1` implies index 0b11, results[3]
-#[derive(PartialEq)]
+#[derive(Eq, PartialEq, Hash, Clone)]
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
@@ -270,5 +271,58 @@ mod tests {
                 false, false, true, true
             ]
         );
+    }
+
+    #[test]
+    fn test_table_map() {
+        let mut map = RuleMap::from(vec![
+            TruthTable::from(PermutationIter::new("A + B <=> C")),
+            TruthTable::from(PermutationIter::new("A <=> 1")),
+            TruthTable::from(PermutationIter::new("B <=> 1")),
+        ]);
+
+        map.insert(TruthTable::from(PermutationIter::new("D <=> C")));
+
+        println!("{}", map);
+    }
+}
+
+struct RuleMap {
+    map: HashMap<char, HashSet<Rc<TruthTable>>>
+}
+
+impl RuleMap {
+    pub fn insert(&mut self, rule: TruthTable) {
+        let ptr = Rc::new(rule);
+        for v in ptr.variables.iter() {
+            let tables = self.map.entry(*v).or_insert(HashSet::from([Rc::clone(&ptr)]));
+            tables.insert(Rc::clone(&ptr));
+        }
+    }
+}
+
+impl From<Vec<TruthTable>> for RuleMap {
+    fn from(ruleset: Vec<TruthTable>) -> Self {
+        let mut map = HashMap::new();
+        for rule in ruleset.into_iter() {
+            let ptr = Rc::new(rule);
+            for v in ptr.variables.iter() {
+                let tables = map.entry(*v).or_insert(HashSet::from([Rc::clone(&ptr)]));
+                tables.insert(Rc::clone(&ptr));
+            }
+        }
+        RuleMap { map }
+    }
+}
+
+impl fmt::Display for RuleMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (k, v) in self.map.iter() {
+            writeln!(f, "{}", k)?;
+            for t in v.iter() {
+                writeln!(f, "{}", t)?;
+            }
+        }
+        Ok(())
     }
 }
