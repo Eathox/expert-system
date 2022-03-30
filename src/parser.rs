@@ -21,12 +21,6 @@ pub enum Token {
 
 pub struct RuleParser;
 
-impl<'a> Default for RuleParser {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl<'a> RuleParser {
     pub fn new() -> Self {
         RuleParser {}
@@ -195,12 +189,6 @@ impl Iterator for PermutationIter<'_> {
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
-}
-
-impl Default for TruthTable {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl TruthTable {
