@@ -410,14 +410,15 @@ mod truth_table {
 
     #[test]
     // TODO: Add more tests once TryFrom<Vec<&str>> is implemented
-    fn test_rulemap() {
+    fn test_rulemap() -> Result<()> {
         let mut map = RuleMap::try_from(vec![
-            TruthTable::from(PermutationIter::new("A + B <=> C")),
-            TruthTable::from(PermutationIter::new("A <=> 1")),
-            TruthTable::from(PermutationIter::new("B <=> 1")),
+            TruthTable::try_from(PermutationIter::new("A + B <=> C"))?,
+            TruthTable::try_from(PermutationIter::new("A <=> 1"))?,
+            TruthTable::try_from(PermutationIter::new("B <=> 1"))?,
         ])
         .unwrap();
-        map.insert(TruthTable::from(PermutationIter::new("D <=> C")));
+        map.insert(TruthTable::try_from(PermutationIter::new("D <=> C"))?);
         println!("{}", map);
+        Ok(())
     }
 }
