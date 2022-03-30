@@ -5,11 +5,11 @@ use anyhow::{anyhow, Context, Result};
 use parser::*;
 use std::{env, path::PathBuf};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Input {
     rules: Vec<String>,
-    facts: Vec<String>,
-    queries: Vec<String>,
+    facts: String,
+    queries: String,
 }
 
 impl TryFrom<PathBuf> for Input {
@@ -19,17 +19,37 @@ impl TryFrom<PathBuf> for Input {
         let content: Vec<String> = read_file(&file_path)
             .context(format!("Failed to read input file: '{:?}'", file_path))?;
         let lines = sanitize::sanitize_lines(&content);
+        let mut lines: Vec<String> = lines.split(|s| s.is_empty()).collect::<Vec<_>>().concat();
 
-        let sections: Vec<&[String]> = lines.split(|s| s.is_empty()).collect::<Vec<_>>();
-        match sections.len() {
-            3 => Ok(Input {
-                rules: sections[0].to_vec(),
-                facts: sections[1].to_vec(),
-                queries: sections[2].to_vec(),
-            }),
-            c if c < 3 => Err(anyhow!("Too few sections in input file")),
-            _ => Err(anyhow!("Too many sections in input file")),
+        let mut rules: Vec<String> = vec![];
+        let mut facts: Option<String> = None;
+        let mut queries: Option<String> = None;
+        for line in lines.iter_mut() {
+            match line {
+                l if l.starts_with("=") || l.starts_with("?") => match l.remove(0) {
+                    '=' => match facts {
+                        None => facts = Some(l.to_string()),
+                        Some(_) => Err(anyhow!("Multiple facts found in input file"))?,
+                    },
+                    '?' => match queries {
+                        None => queries = Some(l.to_string()),
+                        Some(_) => Err(anyhow!("Multiple queries found in input file"))?,
+                    },
+                    _ => unreachable!(),
+                },
+                l if !l.is_empty() => rules.push(l.to_string()),
+                _ => continue,
+            }
         }
+
+        if rules.is_empty() {
+            Err(anyhow!("Missing rules in input file"))?
+        }
+        Ok(Input {
+            rules,
+            facts: facts.context("Missing facts in input file")?,
+            queries: queries.context("Missing queries in input file")?,
+        })
     }
 }
 
@@ -48,6 +68,7 @@ fn main() -> Result<()> {
     let input_file = handle_cli();
     let input = Input::try_from(PathBuf::from(input_file))?;
 
+    println!("{:?}", input);
     for rule in input.rules {
         let table = TruthTable::try_from(PermutationIter::new(&rule))
             .context(format!("Failed to parse rule {}", rule))?;
@@ -65,38 +86,117 @@ pub mod test_utils;
 mod input {
     use super::*;
 
+    use anyhow::Result;
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn empty() {
-        let input_file = test_utils::input_file_path("integration_test/empty.txt");
+    fn spacing() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/spacing.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "ABC".to_string(),
+                queries: "ZYX".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn order() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/order.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "ABC".to_string(),
+                queries: "ZYX".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn rule_order() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/rule_order.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec!["A=>Z".to_string(), "Z=>A".to_string()],
+                facts: "ABC".to_string(),
+                queries: "ZYX".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn error_empty() {
+        let input_file = test_utils::input_file_path("input/empty.txt");
         let result = Input::try_from(input_file);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "Too few sections in input file"
+            "Missing rules in input file"
         );
     }
 
     #[test]
-    fn to_few_sections() {
-        let input_file = test_utils::input_file_path("integration_test/to_few_sections.txt");
+    fn error_missing_rules() {
+        let input_file = test_utils::input_file_path("input/missing_rules.txt");
         let result = Input::try_from(input_file);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "Too few sections in input file"
+            "Missing rules in input file"
         );
     }
 
     #[test]
-    fn to_many_sections() {
-        let input_file = test_utils::input_file_path("integration_test/to_many_sections.txt");
+    fn error_missing_facts() {
+        let input_file = test_utils::input_file_path("input/missing_facts.txt");
         let result = Input::try_from(input_file);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "Too many sections in input file"
+            "Missing facts in input file"
+        );
+    }
+
+    #[test]
+    fn error_missing_queries() {
+        let input_file = test_utils::input_file_path("input/missing_queries.txt");
+        let result = Input::try_from(input_file);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing queries in input file"
+        );
+    }
+
+    #[test]
+    fn error_double_facts() {
+        let input_file = test_utils::input_file_path("input/double_facts.txt");
+        let result = Input::try_from(input_file);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Multiple facts found in input file"
+        );
+    }
+
+    #[test]
+    fn error_double_queries() {
+        let input_file = test_utils::input_file_path("input/double_queries.txt");
+        let result = Input::try_from(input_file);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Multiple queries found in input file"
         );
     }
 }

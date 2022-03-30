@@ -2,6 +2,6 @@ A => Z
 
 =ABC
 
-?GVX
+?ZYX
 
-!FOO
+?ABC

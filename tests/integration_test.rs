@@ -39,25 +39,13 @@ fn to_many_arguments() {
 }
 
 #[test]
-fn empty() {
+fn error_empty() {
     let input_file = test_utils::input_file_path("integration_test/empty.txt");
     run_cmd!(input_file.display().to_string()).failure();
 }
 
 #[test]
-fn to_few_sections() {
-    let input_file = test_utils::input_file_path("integration_test/to_few_sections.txt");
-    run_cmd!(input_file.display().to_string()).failure();
-}
-
-#[test]
-fn to_many_sections() {
-    let input_file = test_utils::input_file_path("integration_test/to_many_sections.txt");
-    run_cmd!(input_file.display().to_string()).failure();
-}
-
-#[test]
-fn invalid_rule() {
+fn error_invalid_rule() {
     let input_file = test_utils::input_file_path("integration_test/invalid_rule.txt");
     run_cmd!(input_file.display().to_string()).failure();
 }
