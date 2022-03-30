@@ -58,7 +58,7 @@ fn main() -> Result<()> {
     let input = Input::try_from(PathBuf::from(input_file))?;
 
     for rule in input.rules {
-        let table = TruthTable::from(PermutationIter::new(&rule));
+        let table = TruthTable::try_from(PermutationIter::new(&rule))?;
         println!("{}\n{}", rule, table);
     }
 
