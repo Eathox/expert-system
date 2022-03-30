@@ -70,7 +70,7 @@ mod input {
     #[test]
     fn empty() {
         let input_file = test_utils::input_file_path("integration_test/empty.txt");
-        let result = Input::try_from(PathBuf::from(input_file));
+        let result = Input::try_from(input_file);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -81,7 +81,7 @@ mod input {
     #[test]
     fn to_few_sections() {
         let input_file = test_utils::input_file_path("integration_test/to_few_sections.txt");
-        let result = Input::try_from(PathBuf::from(input_file));
+        let result = Input::try_from(input_file);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -92,7 +92,7 @@ mod input {
     #[test]
     fn to_many_sections() {
         let input_file = test_utils::input_file_path("integration_test/to_many_sections.txt");
-        let result = Input::try_from(PathBuf::from(input_file));
+        let result = Input::try_from(input_file);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
