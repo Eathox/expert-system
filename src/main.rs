@@ -17,21 +17,21 @@ impl TryFrom<PathBuf> for Input {
 
     fn try_from(file_path: PathBuf) -> Result<Self, Self::Error> {
         let content: Vec<String> = read_file(&file_path)
-            .context(format!("failed to read input file: '{:?}'", file_path))?;
+            .context(format!("Failed to read input file: '{:?}'", file_path))?;
         let lines = sanitize::sanitize_lines(&content);
 
         let mut sections = lines.split(|s| s.is_empty());
         let rules = sections
             .next()
-            .context(format!("missing rules in: {:?}", file_path))?;
+            .context(format!("Missing rules in: {:?}", file_path))?;
         let facts = sections
             .next()
-            .context(format!("missing facts in: {:?}", file_path))?;
+            .context(format!("Missing facts in: {:?}", file_path))?;
         let queries = sections
             .next()
-            .context(format!("missing queries in: {:?}", file_path))?;
+            .context(format!("Missing queries in: {:?}", file_path))?;
         if sections.next().is_some() {
-            return Err(anyhow!("too many sections in input"));
+            return Err(anyhow!("Too many sections in input"));
         }
 
         Ok(Input {

@@ -25,12 +25,12 @@ pub fn read_file<T: FromStr>(file: &impl AsRef<Path>) -> Result<Vec<T>> {
         let line = line.context("Failed to read line")?;
         result.push(
             line.parse()
-                .map_err(|_| anyhow!("failed to parse {:?}", type_name::<T>()))?,
+                .map_err(|_| anyhow!("Failed to parse {:?}", type_name::<T>()))?,
         );
     }
 
     match result.is_empty() {
-        true => Err(anyhow!("file contains no data")),
+        true => Err(anyhow!("File contains no data")),
         false => Ok(result),
     }
 }
