@@ -2,13 +2,7 @@ extern crate expert_system;
 use expert_system::*;
 
 use anyhow::{Context, Result};
-use indoc::indoc;
 use std::env;
-
-pub const USAGE: &str = indoc! {"
-TODO: add usage
-
-"};
 
 fn handle_cli() -> String {
     let args: Vec<String> = env::args().collect();

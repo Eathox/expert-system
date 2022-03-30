@@ -1,12 +1,11 @@
-use assert_cmd::assert::*;
-use assert_cmd::cargo::CommandCargoExt;
-use std::process::Command;
+extern crate expert_system;
+use expert_system::USAGE;
 
 mod utils;
 
-#[path = "../src/main.rs"]
-#[allow(dead_code, unused_imports)]
-mod main;
+use assert_cmd::assert::*;
+use assert_cmd::cargo::CommandCargoExt;
+use std::process::Command;
 
 macro_rules! run_cmd {
     ( $( $l:literal ),* ) => {{
@@ -22,12 +21,12 @@ macro_rules! run_cmd {
 
 #[test]
 fn no_arguments() {
-    let expected = main::USAGE;
+    let expected = USAGE;
     run_cmd!().failure().stderr(expected);
 }
 
 #[test]
 fn to_many_arguments() {
-    let expected = main::USAGE;
+    let expected = USAGE;
     run_cmd!("foo", "bar").failure().stderr(expected);
 }

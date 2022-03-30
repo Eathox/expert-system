@@ -1,6 +1,7 @@
 pub mod sanitize;
 
 use anyhow::{anyhow, Context, Result};
+use indoc::indoc;
 use std::{
     any::type_name,
     fs::File,
@@ -8,6 +9,11 @@ use std::{
     path::Path,
     str::FromStr,
 };
+
+pub const USAGE: &str = indoc! {"
+TODO: add usage
+
+"};
 
 pub fn read_file<T: FromStr>(file: &impl AsRef<Path>) -> Result<Vec<T>> {
     let file = File::open(file).context("Failed to open file")?;
