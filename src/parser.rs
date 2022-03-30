@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Context, Result};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::iter::Peekable;
+use std::rc::Rc;
 use Token::*;
 
 #[derive(Debug, Copy, Clone)]
@@ -186,7 +187,7 @@ impl Iterator for PermutationIter<'_> {
 // `0 => 1` implies index 0b01, results[1]
 // `1 => 0` implies index 0b10, results[2]
 // `1 => 1` implies index 0b11, results[3]
-#[derive(Default, PartialEq)]
+#[derive(Default, Eq, PartialEq, Hash, Clone)]
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
@@ -238,6 +239,64 @@ impl fmt::Display for TruthTable {
             writeln!(f, "| {} |", if *result { 1 } else { 0 })?;
         }
         write!(f, "")
+    }
+}
+
+// Structure that maps for all identifiers the related truth tables.
+struct RuleMap {
+    map: HashMap<char, HashSet<Rc<TruthTable>>>,
+}
+
+impl RuleMap {
+    // To insert a new rule in the rulemap Ad-Hoc
+    pub fn insert(&mut self, rule: TruthTable) {
+        let ptr = Rc::new(rule);
+        for v in ptr.variables.iter() {
+            let tables = self
+                .map
+                .entry(*v)
+                .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
+            tables.insert(Rc::clone(&ptr));
+        }
+    }
+}
+
+// TODO: In the future this should be changed to TryFrom<Vec<&str>> where Vec<&str> is the raw unsanitized list of input rules.
+impl TryFrom<Vec<TruthTable>> for RuleMap {
+    type Error = anyhow::Error;
+
+    fn try_from(ruleset: Vec<TruthTable>) -> Result<Self> {
+        let mut map = HashMap::new();
+        for rule in ruleset.into_iter() {
+            let ptr = Rc::new(rule);
+            for v in ptr.variables.iter() {
+                let tables = map
+                    .entry(*v)
+                    .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
+                tables.insert(Rc::clone(&ptr));
+            }
+        }
+        Ok(RuleMap { map })
+    }
+}
+
+impl TryFrom<Vec<&str>> for RuleMap {
+    type Error = anyhow::Error;
+
+    fn try_from(_ruleset: Vec<&str>) -> Result<Self> {
+        todo!();
+    }
+}
+
+impl fmt::Display for RuleMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (k, v) in self.map.iter() {
+            writeln!(f, "{}", k)?;
+            for t in v.iter() {
+                writeln!(f, "{}", t)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -347,5 +406,19 @@ mod truth_table {
     fn error_invalid_rule() {
         let table = TruthTable::try_from(PermutationIter::new("A + B => "));
         assert!(table.is_err());
+    }
+
+    #[test]
+    // TODO: Add more tests once TryFrom<Vec<&str>> is implemented
+    fn test_rulemap() -> Result<()> {
+        let mut map = RuleMap::try_from(vec![
+            TruthTable::try_from(PermutationIter::new("A + B <=> C"))?,
+            TruthTable::try_from(PermutationIter::new("A <=> 1"))?,
+            TruthTable::try_from(PermutationIter::new("B <=> 1"))?,
+        ])
+        .unwrap();
+        map.insert(TruthTable::try_from(PermutationIter::new("D <=> C"))?);
+        println!("{}", map);
+        Ok(())
     }
 }
