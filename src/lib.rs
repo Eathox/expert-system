@@ -25,19 +25,15 @@ pub fn read_file<T: FromStr>(file: &impl AsRef<Path>) -> Result<Vec<T>> {
         let line = line.context("Failed to read line")?;
         result.push(
             line.parse()
-                .map_err(|_| anyhow!("failed to parse {:?}", type_name::<T>()))?,
+                .map_err(|_| anyhow!("Failed to parse: '{}'", type_name::<T>()))?,
         );
     }
-
-    match result.is_empty() {
-        true => Err(anyhow!("file contains no data")),
-        false => Ok(result),
-    }
+    Ok(result)
 }
 
 #[cfg(test)]
-#[path = "../tests/utils/mod.rs"]
-mod test_utils;
+#[path = "../tests/test_utils/mod.rs"]
+pub mod test_utils;
 
 #[cfg(test)]
 mod read_file {
@@ -45,6 +41,14 @@ mod read_file {
 
     use anyhow::Result;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn empty() -> Result<()> {
+        let input_file = test_utils::input_file_path("read_file/empty.txt");
+        let result: Vec<i32> = read_file(&input_file)?;
+        assert_eq!(result, vec![]);
+        Ok(())
+    }
 
     #[test]
     fn text() -> Result<()> {
@@ -58,32 +62,23 @@ mod read_file {
     fn numbers() -> Result<()> {
         let input_file = test_utils::input_file_path("read_file/numbers.txt");
         let result: Vec<i32> = read_file(&input_file)?;
-
         assert_eq!(result, vec![1, 2, 3, 4, 5]);
         Ok(())
     }
 
     #[test]
-    fn error_non_exist() -> Result<()> {
+    fn error_non_exist() {
         let input_file = test_utils::input_file_path("read_file/non_exist.txt");
         let result: Result<Vec<i32>> = read_file(&input_file);
         assert!(result.is_err());
-        Ok(())
+        assert_eq!(result.unwrap_err().to_string(), "Failed to open file");
     }
 
     #[test]
-    fn error_empty() -> Result<()> {
-        let input_file = test_utils::input_file_path("read_file/empty.txt");
-        let result: Result<Vec<i32>> = read_file(&input_file);
-        assert!(result.is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn error_parse() -> Result<()> {
+    fn error_parse() {
         let input_file = test_utils::input_file_path("read_file/foobar.txt");
         let result: Result<Vec<i32>> = read_file(&input_file);
         assert!(result.is_err());
-        Ok(())
+        assert_eq!(result.unwrap_err().to_string(), "Failed to parse: 'i32'");
     }
 }
