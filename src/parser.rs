@@ -18,6 +18,7 @@ pub enum Token {
     Bool(bool),
 }
 
+#[derive(Default)]
 pub struct RuleParser;
 
 impl<'a> RuleParser {
@@ -127,6 +128,7 @@ impl<'a> RuleParser {
 // `0 => 1`
 // `1 => 0`
 // `1 => 1`
+#[derive(Default)]
 pub struct PermutationIter<'a> {
     formula: &'a str,
     pub variables: Vec<char>,
