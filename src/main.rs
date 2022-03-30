@@ -5,6 +5,7 @@ use anyhow::{anyhow, Context, Result};
 use parser::*;
 use std::{env, path::PathBuf};
 
+#[derive(Debug)]
 pub struct Input {
     rules: Vec<String>,
     facts: Vec<String>,
