@@ -138,9 +138,9 @@ impl PermutationIter<'_> {
         let mut set = HashSet::new();
         let mut variables = formula
             .chars()
-            .filter_map(|c| match c {
-                'A'..='Z' if set.insert(c) => Some(c),
-                _ => None,
+            .filter(|c| match c {
+                'A'..='Z' => set.insert(c.to_owned()),
+                _ => false,
             })
             .collect::<Vec<char>>();
         variables.sort_unstable();
