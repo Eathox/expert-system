@@ -139,9 +139,9 @@ impl PermutationIter<'_> {
         let mut set = HashSet::new();
         let mut variables = formula
             .chars()
-            .filter_map(|c| match c {
-                'A'..='Z' if set.insert(c) => Some(c),
-                _ => None,
+            .filter(|c| match c {
+                'A'..='Z' => set.insert(c.to_owned()),
+                _ => false,
             })
             .collect::<Vec<char>>();
         variables.sort_unstable();
@@ -238,19 +238,21 @@ impl fmt::Display for TruthTable {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_permutationlist() {
-        let mut list = PermutationIter::new("A + B <=> C");
+    use pretty_assertions::assert_eq;
 
-        assert_eq!(Some(String::from("0 + 0 <=> 0")), list.next());
-        assert_eq!(Some(String::from("0 + 0 <=> 1")), list.next());
-        assert_eq!(Some(String::from("0 + 1 <=> 0")), list.next());
-        assert_eq!(Some(String::from("0 + 1 <=> 1")), list.next());
-        assert_eq!(Some(String::from("1 + 0 <=> 0")), list.next());
-        assert_eq!(Some(String::from("1 + 0 <=> 1")), list.next());
-        assert_eq!(Some(String::from("1 + 1 <=> 0")), list.next());
-        assert_eq!(Some(String::from("1 + 1 <=> 1")), list.next());
-        assert_eq!(None, list.next());
+    #[test]
+    fn test_permutationiter() {
+        let mut iter = PermutationIter::new("A + B <=> C");
+
+        assert_eq!(Some("0 + 0 <=> 0".to_string()), iter.next());
+        assert_eq!(Some("0 + 0 <=> 1".to_string()), iter.next());
+        assert_eq!(Some("0 + 1 <=> 0".to_string()), iter.next());
+        assert_eq!(Some("0 + 1 <=> 1".to_string()), iter.next());
+        assert_eq!(Some("1 + 0 <=> 0".to_string()), iter.next());
+        assert_eq!(Some("1 + 0 <=> 1".to_string()), iter.next());
+        assert_eq!(Some("1 + 1 <=> 0".to_string()), iter.next());
+        assert_eq!(Some("1 + 1 <=> 1".to_string()), iter.next());
+        assert_eq!(None, iter.next());
     }
 
     #[test]
