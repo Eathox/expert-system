@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Context, Result};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::rc::Rc;
 use std::iter::Peekable;
+use std::rc::Rc;
 use Token::*;
 
 #[derive(Debug, Copy, Clone)]
@@ -20,6 +20,12 @@ pub enum Token {
 }
 
 pub struct RuleParser;
+
+impl<'a> Default for RuleParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<'a> RuleParser {
     pub fn new() -> Self {
@@ -191,6 +197,12 @@ pub struct TruthTable {
     pub results: Vec<bool>,
 }
 
+impl Default for TruthTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TruthTable {
     pub fn new() -> Self {
         TruthTable {
@@ -231,6 +243,64 @@ impl fmt::Display for TruthTable {
             writeln!(f, "| {} |", if *result { 1 } else { 0 })?;
         }
         write!(f, "")
+    }
+}
+
+// Structure that maps for all identifiers the related truth tables. 
+struct RuleMap {
+    map: HashMap<char, HashSet<Rc<TruthTable>>>,
+}
+
+impl RuleMap {
+    // To insert a new rule in the rulemap Ad-Hoc
+    pub fn insert(&mut self, rule: TruthTable) {
+        let ptr = Rc::new(rule);
+        for v in ptr.variables.iter() {
+            let tables = self
+                .map
+                .entry(*v)
+                .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
+            tables.insert(Rc::clone(&ptr));
+        }
+    }
+}
+
+// TODO: In the future this should be changed to TryFrom<Vec<&str>> where Vec<&str> is the raw unsanitized list of input rules.
+impl TryFrom<Vec<TruthTable>> for RuleMap {
+    type Error = anyhow::Error;
+
+    fn try_from(ruleset: Vec<TruthTable>) -> Result<Self> {
+        let mut map = HashMap::new();
+        for rule in ruleset.into_iter() {
+            let ptr = Rc::new(rule);
+            for v in ptr.variables.iter() {
+                let tables = map
+                    .entry(*v)
+                    .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
+                tables.insert(Rc::clone(&ptr));
+            }
+        }
+        Ok(RuleMap { map })
+    }
+}
+
+impl TryFrom<Vec<&str>> for RuleMap {
+    type Error = anyhow::Error;
+
+    fn try_from(_ruleset: Vec<&str>) -> Result<Self> {
+        todo!();
+    }
+}
+
+impl fmt::Display for RuleMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (k, v) in self.map.iter() {
+            writeln!(f, "{}", k)?;
+            for t in v.iter() {
+                writeln!(f, "{}", t)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -276,55 +346,15 @@ mod tests {
     }
 
     #[test]
-    fn test_table_map() {
-        let mut map = RuleMap::from(vec![
+    // TODO: Add more tests once TryFrom<Vec<&str>> is implemented
+    fn test_rulemap() {
+        let mut map = RuleMap::try_from(vec![
             TruthTable::from(PermutationIter::new("A + B <=> C")),
             TruthTable::from(PermutationIter::new("A <=> 1")),
             TruthTable::from(PermutationIter::new("B <=> 1")),
-        ]);
-
+        ])
+        .unwrap();
         map.insert(TruthTable::from(PermutationIter::new("D <=> C")));
-
         println!("{}", map);
-    }
-}
-
-struct RuleMap {
-    map: HashMap<char, HashSet<Rc<TruthTable>>>
-}
-
-impl RuleMap {
-    pub fn insert(&mut self, rule: TruthTable) {
-        let ptr = Rc::new(rule);
-        for v in ptr.variables.iter() {
-            let tables = self.map.entry(*v).or_insert(HashSet::from([Rc::clone(&ptr)]));
-            tables.insert(Rc::clone(&ptr));
-        }
-    }
-}
-
-impl From<Vec<TruthTable>> for RuleMap {
-    fn from(ruleset: Vec<TruthTable>) -> Self {
-        let mut map = HashMap::new();
-        for rule in ruleset.into_iter() {
-            let ptr = Rc::new(rule);
-            for v in ptr.variables.iter() {
-                let tables = map.entry(*v).or_insert(HashSet::from([Rc::clone(&ptr)]));
-                tables.insert(Rc::clone(&ptr));
-            }
-        }
-        RuleMap { map }
-    }
-}
-
-impl fmt::Display for RuleMap {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (k, v) in self.map.iter() {
-            writeln!(f, "{}", k)?;
-            for t in v.iter() {
-                writeln!(f, "{}", t)?;
-            }
-        }
-        Ok(())
     }
 }
