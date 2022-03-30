@@ -56,7 +56,10 @@ fn main() -> Result<()> {
     let input_file = handle_cli();
     let input = Input::try_from(PathBuf::from(input_file))?;
 
-    let mut _parser = parser::RuleParser::new();
+    for rule in input.rules {
+        let table = TruthTable::from(PermutationIter::new(&rule));
+        println!("{}\n{}", rule, table);
+    }
 
     Ok(())
 }
