@@ -201,15 +201,17 @@ impl TruthTable {
     }
 }
 
-impl From<PermutationIter<'_>> for TruthTable {
-    fn from(mut permutationlist: PermutationIter) -> Self {
+impl TryFrom<PermutationIter<'_>> for TruthTable {
+    type Error = anyhow::Error;
+
+    fn try_from(mut permutation_list: PermutationIter) -> Result<Self, Self::Error> {
         let mut table = Self::new();
         let mut parser = RuleParser::new();
-        for permutation in permutationlist.by_ref() {
-            table.results.push(parser.evaluate(&permutation).unwrap());
+        for permutation in permutation_list.by_ref() {
+            table.results.push(parser.evaluate(&permutation)?);
         }
-        table.variables.append(&mut permutationlist.variables);
-        table
+        table.variables.append(&mut permutation_list.variables);
+        Ok(table)
     }
 }
 
@@ -257,15 +259,15 @@ mod tests {
     }
 
     #[test]
-    fn test_truthtable() {
-        let table = TruthTable::from(PermutationIter::new("A + B <=> C"));
+    fn test_truthtable() -> Result<()> {
+        let table = TruthTable::try_from(PermutationIter::new("A + B <=> C"))?;
         assert_eq!(table.variables, vec!['A', 'B', 'C']);
         assert_eq!(
             table.results,
             vec![true, false, true, false, true, false, false, true]
         );
 
-        let table = TruthTable::from(PermutationIter::new("A + D <=> C | X"));
+        let table = TruthTable::try_from(PermutationIter::new("A + D <=> C | X"))?;
         assert_eq!(table.variables, vec!['A', 'C', 'D', 'X']);
         assert_eq!(
             table.results,
@@ -274,5 +276,6 @@ mod tests {
                 false, false, true, true
             ]
         );
+        Ok(())
     }
 }
