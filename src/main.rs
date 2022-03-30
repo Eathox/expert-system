@@ -19,7 +19,11 @@ fn main() -> Result<()> {
     let input_file = handle_cli();
     let content: Vec<String> =
         read_file(&input_file).context(format!("failed to read input file: '{}'", input_file))?;
+
     let lines = sanitize::sanitize_lines(&content);
     println!("{:?}", lines);
+
+    let mut _parser = parser::RuleParser::new();
+
     Ok(())
 }

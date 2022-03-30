@@ -1,3 +1,4 @@
+pub mod parser;
 pub mod sanitize;
 
 use anyhow::{anyhow, Context, Result};
