@@ -204,17 +204,17 @@ impl TruthTable {
 impl TryFrom<PermutationIter<'_>> for TruthTable {
     type Error = anyhow::Error;
 
-    fn try_from(mut permutation_list: PermutationIter) -> Result<Self, Self::Error> {
+    fn try_from(mut permutation_iter: PermutationIter) -> Result<Self, Self::Error> {
         let mut table = Self::new();
         let mut parser = RuleParser::new();
-        for permutation in permutation_list.by_ref() {
+        for permutation in permutation_iter.by_ref() {
             table.results.push(
                 parser
                     .evaluate(&permutation)
                     .context(format!("Failed to evaluate permutation {}", permutation))?,
             );
         }
-        table.variables.append(&mut permutation_list.variables);
+        table.variables.append(&mut permutation_iter.variables);
         Ok(table)
     }
 }
