@@ -19,7 +19,7 @@ impl TryFrom<PathBuf> for Input {
             .context(format!("failed to read input file: '{:?}'", file_path))?;
         let lines = sanitize::sanitize_lines(&content);
 
-        let mut sections = lines.split(|s| s == "");
+        let mut sections = lines.split(|s| s.is_empty());
         let rules = sections
             .next()
             .context(format!("missing rules in: {:?}", file_path))?;
