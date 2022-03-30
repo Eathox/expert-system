@@ -2,7 +2,7 @@ use assert_cmd::assert::*;
 use assert_cmd::cargo::CommandCargoExt;
 use std::process::Command;
 
-mod common;
+mod utils;
 
 #[path = "../src/main.rs"]
 #[allow(dead_code, unused_imports)]
@@ -21,8 +21,13 @@ macro_rules! run_cmd {
 }
 
 #[test]
-fn invalid_arguments() {
+fn no_arguments() {
     let expected = main::USAGE;
     run_cmd!().failure().stderr(expected);
+}
+
+#[test]
+fn to_many_arguments() {
+    let expected = main::USAGE;
     run_cmd!("foo", "bar").failure().stderr(expected);
 }

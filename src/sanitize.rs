@@ -27,18 +27,16 @@ pub fn sanitize_lines(lines: &[impl Borrow<str>]) -> Vec<String> {
     result
 }
 
-#[path = "../tests/common/mod.rs"]
-mod common;
-
 #[cfg(test)]
 mod remove_spaces {
     use super::*;
+
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn only_whitespace() {
         let input = " \t\n\r";
         let result: String = remove_spaces(input);
-
         assert_eq!(result, "");
     }
 
@@ -46,7 +44,6 @@ mod remove_spaces {
     fn no_whitespace() {
         let input = "hello-world";
         let result: String = remove_spaces(input);
-
         assert_eq!(result, input);
     }
 
@@ -54,7 +51,6 @@ mod remove_spaces {
     fn mixed() {
         let input = "  h e l l o\nw o r l d  ";
         let result: String = remove_spaces(input);
-
         assert_eq!(result, "helloworld");
     }
 }
@@ -63,11 +59,12 @@ mod remove_spaces {
 mod remove_comment {
     use super::*;
 
+    use pretty_assertions::assert_eq;
+
     #[test]
     fn only_comment() {
         let input = "#hello world";
         let result: String = remove_comment(input);
-
         assert_eq!(result, "");
     }
 
@@ -75,7 +72,6 @@ mod remove_comment {
     fn no_comment() {
         let input = "hello world";
         let result: String = remove_comment(input);
-
         assert_eq!(result, input);
     }
 
@@ -83,7 +79,6 @@ mod remove_comment {
     fn mixed() {
         let input = "hello #world";
         let result: String = remove_comment(input);
-
         assert_eq!(result, "hello ");
     }
 }
@@ -91,14 +86,16 @@ mod remove_comment {
 #[cfg(test)]
 mod sanitize_lines {
     use super::*;
+    use crate::read_file;
+    use crate::test_utils;
+
     use anyhow::Result;
-    use expert_system::read_file;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn empty_lines() {
         let input: Vec<&str> = vec!["  ", "", "\t"];
         let result: Vec<String> = sanitize_lines(&input);
-
         assert_eq!(result, Vec::<String>::new());
     }
 
@@ -106,7 +103,6 @@ mod sanitize_lines {
     fn empty_lines_at_end() {
         let input: Vec<&str> = vec!["hello", "  ", "", "\t"];
         let result: Vec<String> = sanitize_lines(&input);
-
         assert_eq!(result, vec!["hello"]);
     }
 
@@ -114,7 +110,6 @@ mod sanitize_lines {
     fn merge_empty_lines() {
         let input: Vec<&str> = vec!["hello", "  ", "", "\t", "world"];
         let result: Vec<String> = sanitize_lines(&input);
-
         assert_eq!(result, vec!["hello", "", "world"]);
     }
 
@@ -122,16 +117,15 @@ mod sanitize_lines {
     fn every_other_empty() {
         let input: Vec<&str> = vec!["f", "", "o", "", "o"];
         let result: Vec<String> = sanitize_lines(&input);
-
         assert_eq!(result, vec!["f", "", "o", "", "o"]);
     }
 
     #[test]
     fn example_input() -> Result<()> {
-        let input_file = common::input_file_path("sanitize_lines/example_input.txt");
+        let input_file = test_utils::input_file_path("sanitize_lines/example_input.txt");
         let input: Vec<String> = read_file(&input_file)?;
 
-        let expect_file = common::input_file_path("sanitize_lines/example_input_expected.txt");
+        let expect_file = test_utils::input_file_path("sanitize_lines/example_input_expected.txt");
         let expected: Vec<String> = read_file(&expect_file)?;
 
         let result: Vec<String> = sanitize_lines(&input);

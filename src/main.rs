@@ -1,12 +1,12 @@
-use anyhow::{Context, Result};
+extern crate expert_system;
 use expert_system::*;
+
+use anyhow::{Context, Result};
 use indoc::indoc;
 use std::env;
 
-mod sanitize;
-
 pub const USAGE: &str = indoc! {"
-    TODO: add usage
+TODO: add usage
 
 "};
 
