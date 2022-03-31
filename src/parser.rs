@@ -19,6 +19,7 @@ pub enum Token {
     Bool(bool),
 }
 
+#[derive(Default)]
 pub struct RuleParser;
 
 impl<'a> RuleParser {
@@ -135,7 +136,8 @@ pub struct PermutationIter {
 }
 
 impl PermutationIter {
-    pub fn new(formula: String) -> PermutationIter {
+    pub fn new(formula: impl AsRef<str>) -> PermutationIter {
+        let formula = formula.as_ref().to_owned();
         let mut set = HashSet::new();
         let mut variables = formula
             .chars()
@@ -153,14 +155,14 @@ impl PermutationIter {
     }
 }
 
-impl Iterator for PermutationIter<'_> {
+impl Iterator for PermutationIter {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.size == 1 << self.variables.len() {
             None
         } else {
-            let mut permutation = String::from(self.formula);
+            let mut permutation = self.formula.clone();
             for (i, c) in self.variables.iter().enumerate() {
                 permutation = permutation.replace(
                     &c.to_string(),
@@ -185,7 +187,7 @@ impl Iterator for PermutationIter<'_> {
 // `0 => 1` implies index 0b01, results[1]
 // `1 => 0` implies index 0b10, results[2]
 // `1 => 1` implies index 0b11, results[3]
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Default, Eq, PartialEq, Hash, Clone)]
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
@@ -200,15 +202,21 @@ impl TruthTable {
     }
 }
 
-impl From<PermutationIter<'_>> for TruthTable {
-    fn from(mut permutationlist: PermutationIter) -> Self {
+impl TryFrom<PermutationIter> for TruthTable {
+    type Error = anyhow::Error;
+
+    fn try_from(mut permutation_iter: PermutationIter) -> Result<Self, Self::Error> {
         let mut table = Self::new();
         let mut parser = RuleParser::new();
-        for permutation in permutationlist.by_ref() {
-            table.results.push(parser.evaluate(&permutation).unwrap());
+        for permutation in permutation_iter.by_ref() {
+            table.results.push(
+                parser
+                    .evaluate(&permutation)
+                    .context(format!("Failed to evaluate permutation {}", permutation))?,
+            );
         }
-        table.variables.append(&mut permutationlist.variables);
-        table
+        table.variables.append(&mut permutation_iter.variables);
+        Ok(table)
     }
 }
 
@@ -235,14 +243,18 @@ impl fmt::Display for TruthTable {
 }
 
 // Structure that maps for all identifiers the related truth tables.
+#[derive(Default, Eq, PartialEq)]
 struct RuleMap {
     map: HashMap<char, HashSet<Rc<TruthTable>>>,
 }
 
 impl RuleMap {
     // To insert a new rule in the rulemap Ad-Hoc
-    pub fn insert(&mut self, rule: TruthTable) {
-        let ptr = Rc::new(rule);
+    pub fn insert<T>(&mut self, rule: T) -> Result<()>
+    where
+        T: AsRef<str>,
+    {
+        let ptr = Rc::new(TruthTable::try_from(PermutationIter::new(rule))?);
         for v in ptr.variables.iter() {
             let tables = self
                 .map
@@ -250,14 +262,35 @@ impl RuleMap {
                 .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
             tables.insert(Rc::clone(&ptr));
         }
+        Ok(())
+    }
+
+    pub fn insert_vec<T>(&mut self, rules: Vec<T>) -> Result<()>
+    where
+        T: AsRef<str>,
+    {
+        for rule in rules.iter() {
+            self.insert(rule)?
+        }
+        Ok(())
     }
 }
 
-// TODO: In the future this should be changed to TryFrom<Vec<&str>> where Vec<&str> is the raw unsanitized list of input rules.
-impl TryFrom<Vec<TruthTable>> for RuleMap {
+impl<T> TryFrom<Vec<T>> for RuleMap
+where
+    T: AsRef<str>,
+{
     type Error = anyhow::Error;
 
-    fn try_from(ruleset: Vec<TruthTable>) -> Result<Self> {
+    fn try_from(rules: Vec<T>) -> Result<Self>
+    where
+        T: AsRef<str>,
+    {
+        let ruleset = rules
+            .into_iter()
+            .map(|s| TruthTable::try_from(PermutationIter::new(s)))
+            .collect::<Result<Vec<TruthTable>>>()
+            .context("Unable to build RuleMap")?;
         let mut map = HashMap::new();
         for rule in ruleset.into_iter() {
             let ptr = Rc::new(rule);
@@ -269,14 +302,6 @@ impl TryFrom<Vec<TruthTable>> for RuleMap {
             }
         }
         Ok(RuleMap { map })
-    }
-}
-
-impl TryFrom<Vec<&str>> for RuleMap {
-    type Error = anyhow::Error;
-
-    fn try_from(_ruleset: Vec<&str>) -> Result<Self> {
-        todo!();
     }
 }
 
@@ -293,56 +318,115 @@ impl fmt::Display for RuleMap {
 }
 
 #[cfg(test)]
-mod tests {
+mod purmutation_iter {
     use super::*;
 
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_permutationiter() {
-        let mut iter = PermutationIter::new("A + B <=> C");
-
-        assert_eq!(Some("0 + 0 <=> 0".to_string()), iter.next());
-        assert_eq!(Some("0 + 0 <=> 1".to_string()), iter.next());
-        assert_eq!(Some("0 + 1 <=> 0".to_string()), iter.next());
-        assert_eq!(Some("0 + 1 <=> 1".to_string()), iter.next());
-        assert_eq!(Some("1 + 0 <=> 0".to_string()), iter.next());
-        assert_eq!(Some("1 + 0 <=> 1".to_string()), iter.next());
-        assert_eq!(Some("1 + 1 <=> 0".to_string()), iter.next());
-        assert_eq!(Some("1 + 1 <=> 1".to_string()), iter.next());
+    fn empty() {
+        let mut iter = PermutationIter::new("");
+        assert_eq!(Some("".to_string()), iter.next());
         assert_eq!(None, iter.next());
     }
 
     #[test]
-    fn test_truthtable() {
-        let table = TruthTable::from(PermutationIter::new("A + B <=> C"));
+    fn identifiers() {
+        let mut iter = PermutationIter::new("! 1 0 , . a z A Z");
+        assert_eq!(Some("! 1 0 , . a z 0 0".to_string()), iter.next());
+        assert_eq!(Some("! 1 0 , . a z 0 1".to_string()), iter.next());
+        assert_eq!(Some("! 1 0 , . a z 1 0".to_string()), iter.next());
+        assert_eq!(Some("! 1 0 , . a z 1 1".to_string()), iter.next());
+        assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn order() {
+        let mut iter = PermutationIter::new("A B C");
+        assert_eq!(Some("0 0 0".to_string()), iter.next());
+        assert_eq!(Some("0 0 1".to_string()), iter.next());
+        assert_eq!(Some("0 1 0".to_string()), iter.next());
+        assert_eq!(Some("0 1 1".to_string()), iter.next());
+        assert_eq!(Some("1 0 0".to_string()), iter.next());
+        assert_eq!(Some("1 0 1".to_string()), iter.next());
+        assert_eq!(Some("1 1 0".to_string()), iter.next());
+        assert_eq!(Some("1 1 1".to_string()), iter.next());
+        assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn duplicate_identifiers() {
+        let mut iter = PermutationIter::new("A A B B");
+        assert_eq!(Some("0 0 0 0".to_string()), iter.next());
+        assert_eq!(Some("0 0 1 1".to_string()), iter.next());
+        assert_eq!(Some("1 1 0 0".to_string()), iter.next());
+        assert_eq!(Some("1 1 1 1".to_string()), iter.next());
+        assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn with_rule_symbols() {
+        let mut iter = PermutationIter::new("A + B <=> C");
+        assert_eq!(Some("0 + 0 <=> 0".to_string()), iter.next());
+        assert_eq!(Some("0 + 0 <=> 1".to_string()), iter.next());
+        assert_eq!(Some("0 + 1 <=> 0".to_string()), iter.next());
+    }
+
+    #[test]
+    fn respect_white_space() {
+        let mut iter = PermutationIter::new("\t\n\r A");
+        assert_eq!(Some("\t\n\r 0".to_string()), iter.next());
+        assert_eq!(Some("\t\n\r 1".to_string()), iter.next());
+        assert_eq!(None, iter.next());
+    }
+}
+
+#[cfg(test)]
+mod truth_table {
+    use super::*;
+
+    use anyhow::Result;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn simple() -> Result<()> {
+        let table = TruthTable::try_from(PermutationIter::new("A => Z"))?;
+        assert_eq!(table.variables, vec!['A', 'Z']);
+        assert_eq!(table.results, vec![true, true, false, true]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_valid_rule() -> Result<()> {
+        let table = TruthTable::try_from(PermutationIter::new("A + B <=> C"))?;
         assert_eq!(table.variables, vec!['A', 'B', 'C']);
         assert_eq!(
             table.results,
             vec![true, false, true, false, true, false, false, true]
         );
+        Ok(())
+    }
+}
 
-        let table = TruthTable::from(PermutationIter::new("A + D <=> C | X"));
-        assert_eq!(table.variables, vec!['A', 'C', 'D', 'X']);
-        assert_eq!(
-            table.results,
-            vec![
-                true, false, true, false, false, false, false, false, true, false, false, true,
-                false, false, true, true
-            ]
-        );
+#[cfg(test)]
+mod rulemap {
+    use super::*;
+
+    use anyhow::Result;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn empty() -> Result<()> {
+        Ok(())
     }
 
     #[test]
-    // TODO: Add more tests once TryFrom<Vec<&str>> is implemented
-    fn test_rulemap() {
-        let mut map = RuleMap::try_from(vec![
-            TruthTable::from(PermutationIter::new("A + B <=> C")),
-            TruthTable::from(PermutationIter::new("A <=> 1")),
-            TruthTable::from(PermutationIter::new("B <=> 1")),
-        ])
-        .unwrap();
-        map.insert(TruthTable::from(PermutationIter::new("D <=> C")));
-        println!("{}", map);
+    fn insert() -> Result<()> {
+        Ok(())
+    }
+
+    #[test]
+    fn insert_vec() -> Result<()> {
+        Ok(())
     }
 }
