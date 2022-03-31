@@ -28,7 +28,7 @@ pub fn sanitize_lines(lines: &[impl Borrow<str>]) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod remove_spaces {
+mod tests_remove_spaces {
     use super::*;
 
     use pretty_assertions::assert_eq;
@@ -56,7 +56,7 @@ mod remove_spaces {
 }
 
 #[cfg(test)]
-mod remove_comment {
+mod tests_remove_comment {
     use super::*;
 
     use pretty_assertions::assert_eq;
@@ -84,7 +84,7 @@ mod remove_comment {
 }
 
 #[cfg(test)]
-mod sanitize_lines {
+mod tests_sanitize_lines {
     use super::*;
     use crate::read_file;
     use crate::test_utils;
