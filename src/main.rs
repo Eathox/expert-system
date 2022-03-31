@@ -4,7 +4,7 @@ use expert_system::*;
 use anyhow::{anyhow, Context, Result};
 use core::fmt;
 use parser::*;
-use std::{collections::HashSet, env, path::PathBuf};
+use std::{borrow::Borrow, collections::HashSet, env, path::PathBuf};
 
 #[derive(Debug, PartialEq)]
 pub struct Input {
@@ -31,7 +31,18 @@ impl TryFrom<PathBuf> for Input {
     fn try_from(file_path: PathBuf) -> Result<Self, Self::Error> {
         let content: Vec<String> = read_file(&file_path)
             .context(format!("Failed to read input file: '{:?}'", file_path))?;
-        let mut lines = sanitize::sanitize_lines(&content);
+        Self::try_from(content)
+    }
+}
+
+impl<T> TryFrom<Vec<T>> for Input
+where
+    T: Borrow<str>,
+{
+    type Error = anyhow::Error;
+
+    fn try_from(lines: Vec<T>) -> Result<Self, Self::Error> {
+        let mut lines = sanitize::sanitize_lines(&lines);
 
         let mut rules: Vec<String> = vec![];
         let mut facts: Option<String> = None;
@@ -116,68 +127,8 @@ mod input {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn order() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/order.txt");
-        let result = Input::try_from(input_file)?;
-        assert_eq!(
-            result,
-            Input {
-                rules: vec!["A=>Z".to_string()],
-                facts: "ABC".to_string(),
-                queries: "ZYX".to_string(),
-            }
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn rule_order() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/rule_order.txt");
-        let result = Input::try_from(input_file)?;
-        assert_eq!(
-            result,
-            Input {
-                rules: vec!["A=>Z".to_string(), "Z=>A".to_string()],
-                facts: "ABC".to_string(),
-                queries: "ZYX".to_string(),
-            }
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn empty_facts() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/empty_facts.txt");
-        let result = Input::try_from(input_file)?;
-        assert_eq!(
-            result,
-            Input {
-                rules: vec!["A=>Z".to_string()],
-                facts: "".to_string(),
-                queries: "ZYX".to_string(),
-            }
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn empty_queries() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/empty_queries.txt");
-        let result = Input::try_from(input_file)?;
-        assert_eq!(
-            result,
-            Input {
-                rules: vec!["A=>Z".to_string()],
-                facts: "ABC".to_string(),
-                queries: "".to_string(),
-            }
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn duplicate_facts() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/duplicate_facts.txt");
+    fn from_file() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/valid.txt");
         let result = Input::try_from(input_file)?;
         assert_eq!(
             result,
@@ -191,13 +142,44 @@ mod input {
     }
 
     #[test]
-    fn duplicate_queries() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/duplicate_queries.txt");
-        let result = Input::try_from(input_file)?;
+    fn error_from_file_non_exist() {
+        let input_file = test_utils::input_file_path("input/non_exist.txt");
+        let result = Input::try_from(input_file);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn spacing() -> Result<()> {
         assert_eq!(
-            result,
+            Input::try_from(vec!["A=>Z", "=A", "?Z"])?,
             Input {
                 rules: vec!["A=>Z".to_string()],
+                facts: "A".to_string(),
+                queries: "Z".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn order() -> Result<()> {
+        assert_eq!(
+            Input::try_from(vec!["?Z", "=A", "A=>Z"])?,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "A".to_string(),
+                queries: "Z".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn rule_order() -> Result<()> {
+        assert_eq!(
+            Input::try_from(vec!["A=>Z", "=A", "Z=>A", "?Z"])?,
+            Input {
+                rules: vec!["A=>Z".to_string(), "Z=>A".to_string()],
                 facts: "A".to_string(),
                 queries: "Z".to_string(),
             }
@@ -207,14 +189,77 @@ mod input {
 
     #[test]
     fn no_rules() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/no_rules.txt");
-        let result = Input::try_from(input_file)?;
         assert_eq!(
-            result,
+            Input::try_from(vec!["=A", "?Z"])?,
             Input {
                 rules: vec![],
-                facts: "ABC".to_string(),
-                queries: "ZYX".to_string(),
+                facts: "A".to_string(),
+                queries: "Z".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn valid() -> Result<()> {
+        assert_eq!(
+            Input::try_from(vec!["A=>Z", "=A", "?Z"])?,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "A".to_string(),
+                queries: "Z".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn empty_facts() -> Result<()> {
+        assert_eq!(
+            Input::try_from(vec!["=", "?Z"])?,
+            Input {
+                rules: vec![],
+                facts: "".to_string(),
+                queries: "Z".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn empty_queries() -> Result<()> {
+        assert_eq!(
+            Input::try_from(vec!["=A", "?"])?,
+            Input {
+                rules: vec![],
+                facts: "A".to_string(),
+                queries: "".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn duplicate_facts() -> Result<()> {
+        assert_eq!(
+            Input::try_from(vec!["=AA", "?"])?,
+            Input {
+                rules: vec![],
+                facts: "A".to_string(),
+                queries: "".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn duplicate_queries() -> Result<()> {
+        assert_eq!(
+            Input::try_from(vec!["=", "?ZZ"])?,
+            Input {
+                rules: vec![],
+                facts: "".to_string(),
+                queries: "Z".to_string(),
             }
         );
         Ok(())
@@ -222,32 +267,28 @@ mod input {
 
     #[test]
     fn error_empty() {
-        let input_file = test_utils::input_file_path("input/empty.txt");
-        let result = Input::try_from(input_file);
+        let result = Input::try_from(Vec::<String>::new());
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "No facts in input file");
     }
 
     #[test]
     fn error_no_facts() {
-        let input_file = test_utils::input_file_path("input/no_facts.txt");
-        let result = Input::try_from(input_file);
+        let result = Input::try_from(vec!["?"]);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "No facts in input file");
     }
 
     #[test]
     fn error_no_queries() {
-        let input_file = test_utils::input_file_path("input/no_queries.txt");
-        let result = Input::try_from(input_file);
+        let result = Input::try_from(vec!["="]);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "No queries in input file");
     }
 
     #[test]
     fn error_double_facts() {
-        let input_file = test_utils::input_file_path("input/double_facts.txt");
-        let result = Input::try_from(input_file);
+        let result = Input::try_from(vec!["=", "=", "?"]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -257,8 +298,7 @@ mod input {
 
     #[test]
     fn error_double_queries() {
-        let input_file = test_utils::input_file_path("input/double_queries.txt");
-        let result = Input::try_from(input_file);
+        let result = Input::try_from(vec!["=", "?", "?"]);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
