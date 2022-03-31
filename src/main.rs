@@ -4,7 +4,7 @@ use expert_system::*;
 use anyhow::{anyhow, Context, Result};
 use core::fmt;
 use parser::*;
-use std::{env, path::PathBuf};
+use std::{collections::HashSet, env, path::PathBuf};
 
 #[derive(Debug, PartialEq)]
 pub struct Input {
@@ -55,12 +55,29 @@ impl TryFrom<PathBuf> for Input {
         }
 
         if rules.is_empty() {
-            Err(anyhow!("Missing rules in input file"))?
+            Err(anyhow!("No rules in input file"))?
         }
+        let facts = facts.context("No facts in input file")?;
+        if let Some(c) = facts.chars().find(|c| !('A'..='Z').contains(c)) {
+            Err(anyhow!("Invalid identifier in facts: '{}'", c))?
+        }
+        let queries = queries.context("No queries in input file")?;
+        if let Some(c) = queries.chars().find(|c| !('A'..='Z').contains(c)) {
+            Err(anyhow!("Invalid identifier in query: '{}'", c))?
+        }
+
+        let mut fact_set = HashSet::new();
+        let mut queries_set = HashSet::new();
         Ok(Input {
             rules,
-            facts: facts.context("Missing facts in input file")?,
-            queries: queries.context("Missing queries in input file")?,
+            facts: facts
+                .chars()
+                .filter(|c| fact_set.insert(c.to_owned()))
+                .collect(),
+            queries: queries
+                .chars()
+                .filter(|c| queries_set.insert(c.to_owned()))
+                .collect(),
         })
     }
 }
@@ -117,36 +134,6 @@ mod input {
     }
 
     #[test]
-    fn spacing() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/spacing.txt");
-        let result = Input::try_from(input_file)?;
-        assert_eq!(
-            result,
-            Input {
-                rules: vec!["A=>Z".to_string()],
-                facts: "ABC".to_string(),
-                queries: "ZYX".to_string(),
-            }
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn white_space() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/white_space.txt");
-        let result = Input::try_from(input_file)?;
-        assert_eq!(
-            result,
-            Input {
-                rules: vec!["A=>Z".to_string()],
-                facts: "ABC".to_string(),
-                queries: "ZYX".to_string(),
-            }
-        );
-        Ok(())
-    }
-
-    #[test]
     fn rule_order() -> Result<()> {
         let input_file = test_utils::input_file_path("input/rule_order.txt");
         let result = Input::try_from(input_file)?;
@@ -162,47 +149,95 @@ mod input {
     }
 
     #[test]
+    fn empty_facts() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/empty_facts.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "".to_string(),
+                queries: "ZYX".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn empty_queries() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/empty_queries.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "ABC".to_string(),
+                queries: "".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn duplicate_facts() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/duplicate_facts.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "A".to_string(),
+                queries: "Z".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn duplicate_queries() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/duplicate_queries.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "A".to_string(),
+                queries: "Z".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
     fn error_empty() {
         let input_file = test_utils::input_file_path("input/empty.txt");
         let result = Input::try_from(input_file);
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Missing rules in input file"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "No rules in input file");
     }
 
     #[test]
-    fn error_missing_rules() {
-        let input_file = test_utils::input_file_path("input/missing_rules.txt");
+    fn error_no_rules() {
+        let input_file = test_utils::input_file_path("input/no_rules.txt");
         let result = Input::try_from(input_file);
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Missing rules in input file"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "No rules in input file");
     }
 
     #[test]
-    fn error_missing_facts() {
-        let input_file = test_utils::input_file_path("input/missing_facts.txt");
+    fn error_no_facts() {
+        let input_file = test_utils::input_file_path("input/no_facts.txt");
         let result = Input::try_from(input_file);
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Missing facts in input file"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "No facts in input file");
     }
 
     #[test]
-    fn error_missing_queries() {
-        let input_file = test_utils::input_file_path("input/missing_queries.txt");
+    fn error_no_queries() {
+        let input_file = test_utils::input_file_path("input/no_queries.txt");
         let result = Input::try_from(input_file);
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Missing queries in input file"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "No queries in input file");
     }
 
     #[test]
