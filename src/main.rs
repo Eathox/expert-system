@@ -89,6 +89,21 @@ mod input {
     use pretty_assertions::assert_eq;
 
     #[test]
+    fn order() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/order.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec!["A=>Z".to_string()],
+                facts: "ABC".to_string(),
+                queries: "ZYX".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
     fn spacing() -> Result<()> {
         let input_file = test_utils::input_file_path("input/spacing.txt");
         let result = Input::try_from(input_file)?;
@@ -104,8 +119,8 @@ mod input {
     }
 
     #[test]
-    fn order() -> Result<()> {
-        let input_file = test_utils::input_file_path("input/order.txt");
+    fn white_space() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/white_space.txt");
         let result = Input::try_from(input_file)?;
         assert_eq!(
             result,
