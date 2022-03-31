@@ -18,8 +18,7 @@ impl TryFrom<PathBuf> for Input {
     fn try_from(file_path: PathBuf) -> Result<Self, Self::Error> {
         let content: Vec<String> = read_file(&file_path)
             .context(format!("Failed to read input file: '{:?}'", file_path))?;
-        let lines = sanitize::sanitize_lines(&content);
-        let mut lines: Vec<String> = lines.split(|s| s.is_empty()).collect::<Vec<_>>().concat();
+        let mut lines = sanitize::sanitize_lines(&content);
 
         let mut rules: Vec<String> = vec![];
         let mut facts: Option<String> = None;
