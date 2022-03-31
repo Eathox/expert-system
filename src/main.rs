@@ -2,6 +2,7 @@ extern crate expert_system;
 use expert_system::*;
 
 use anyhow::{anyhow, Context, Result};
+use core::fmt;
 use parser::*;
 use std::{env, path::PathBuf};
 
@@ -10,6 +11,18 @@ pub struct Input {
     rules: Vec<String>,
     facts: String,
     queries: String,
+}
+
+impl fmt::Display for Input {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "Rules:")?;
+        for rule in self.rules.iter() {
+            writeln!(f, "  {}", rule)?;
+        }
+        writeln!(f, "Facts: {}", self.facts)?;
+        writeln!(f, "Queries: {}", self.queries)?;
+        Ok(())
+    }
 }
 
 impl TryFrom<PathBuf> for Input {
@@ -67,7 +80,7 @@ fn main() -> Result<()> {
     let input_file = handle_cli();
     let input = Input::try_from(PathBuf::from(input_file))?;
 
-    println!("{:?}", input);
+    println!("{}", input);
     for rule in input.rules {
         let table = TruthTable::try_from(PermutationIter::new(&rule))
             .context(format!("Failed to parse rule {}", rule))?;
