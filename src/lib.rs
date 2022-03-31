@@ -2,6 +2,8 @@ pub mod parser;
 pub mod sanitize;
 
 use anyhow::{anyhow, Context, Result};
+use core::borrow::Borrow;
+use core::char;
 use indoc::indoc;
 use std::{
     any::type_name,
@@ -15,6 +17,10 @@ pub const USAGE: &str = indoc! {"
 TODO: add usage
 
 "};
+
+pub fn is_identifier(c: impl Borrow<char>) -> bool {
+    ('A'..='Z').contains(c.borrow())
+}
 
 pub fn read_file<T: FromStr>(file: &impl AsRef<Path>) -> Result<Vec<T>> {
     let file = File::open(file).context("Failed to open file")?;
@@ -34,6 +40,20 @@ pub fn read_file<T: FromStr>(file: &impl AsRef<Path>) -> Result<Vec<T>> {
 #[cfg(test)]
 #[path = "../tests/test_utils/mod.rs"]
 pub mod test_utils;
+
+#[cfg(test)]
+mod is_identifier {
+    use super::*;
+
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn all() {
+        for c in '\0'..=char::MAX {
+            assert_eq!(is_identifier(&c), ('A'..='Z').contains(&c));
+        }
+    }
+}
 
 #[cfg(test)]
 mod read_file {
