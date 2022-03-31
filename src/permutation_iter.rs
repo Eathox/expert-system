@@ -57,7 +57,7 @@ impl Iterator for PermutationIter<'_> {
 }
 
 #[cfg(test)]
-mod permutation_iter {
+mod tests_permutation_iter {
     use super::*;
 
     use pretty_assertions::assert_eq;

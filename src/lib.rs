@@ -44,7 +44,7 @@ pub fn read_file<T: FromStr>(file: &impl AsRef<Path>) -> Result<Vec<T>> {
 pub mod test_utils;
 
 #[cfg(test)]
-mod is_identifier {
+mod tests_is_identifier {
     use super::*;
 
     use pretty_assertions::assert_eq;
@@ -58,7 +58,7 @@ mod is_identifier {
 }
 
 #[cfg(test)]
-mod read_file {
+mod tests_read_file {
     use super::*;
 
     use anyhow::Result;

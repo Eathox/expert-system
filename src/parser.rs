@@ -247,7 +247,7 @@ impl fmt::Debug for RuleMap {
 }
 
 #[cfg(test)]
-mod truth_table {
+mod tests_truth_table {
     use super::*;
 
     use anyhow::Result;

@@ -89,7 +89,7 @@ where
 }
 
 #[cfg(test)]
-mod input {
+mod tests_input {
     use super::*;
     use crate::test_utils;
 
