@@ -58,11 +58,11 @@ impl TryFrom<PathBuf> for Input {
             Err(anyhow!("No rules in input file"))?
         }
         let facts = facts.context("No facts in input file")?;
-        if let Some(c) = facts.chars().find(|c| !('A'..='Z').contains(c)) {
+        if let Some(c) = facts.chars().find(|c| !is_identifier(c)) {
             Err(anyhow!("Invalid identifier in facts: '{}'", c))?
         }
         let queries = queries.context("No queries in input file")?;
-        if let Some(c) = queries.chars().find(|c| !('A'..='Z').contains(c)) {
+        if let Some(c) = queries.chars().find(|c| !is_identifier(c)) {
             Err(anyhow!("Invalid identifier in query: '{}'", c))?
         }
 

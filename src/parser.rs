@@ -1,3 +1,5 @@
+use crate::*;
+
 use anyhow::{anyhow, Context, Result};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -141,10 +143,7 @@ impl PermutationIter<'_> {
         let mut set = HashSet::new();
         let mut variables = formula
             .chars()
-            .filter(|c| match c {
-                'A'..='Z' => set.insert(c.to_owned()),
-                _ => false,
-            })
+            .filter(|c| is_identifier(c) && set.insert(c.to_owned()))
             .collect::<Vec<char>>();
         variables.sort_unstable();
         PermutationIter {
