@@ -4,14 +4,14 @@ use anyhow::{anyhow, Context, Result};
 use core::fmt;
 use std::{borrow::Borrow, collections::HashSet, path::PathBuf};
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct Input {
     pub rules: Vec<String>,
     pub facts: String,
     pub queries: String,
 }
 
-impl fmt::Display for Input {
+impl fmt::Debug for Input {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Rules:")?;
         for rule in self.rules.iter() {

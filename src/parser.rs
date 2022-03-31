@@ -166,7 +166,7 @@ impl TryFrom<PermutationIter<'_>> for TruthTable {
     }
 }
 
-impl fmt::Display for TruthTable {
+impl fmt::Debug for TruthTable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let len = self.variables.len();
         for v in &self.variables {
@@ -234,12 +234,12 @@ impl TryFrom<Vec<&str>> for RuleMap {
     }
 }
 
-impl fmt::Display for RuleMap {
+impl fmt::Debug for RuleMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (k, v) in self.map.iter() {
             writeln!(f, "{}", k)?;
             for t in v.iter() {
-                writeln!(f, "{}", t)?;
+                writeln!(f, "{:?}", t)?;
             }
         }
         Ok(())
@@ -294,7 +294,7 @@ mod truth_table {
         ])
         .unwrap();
         map.insert(TruthTable::try_from(PermutationIter::new("D <=> C"))?);
-        println!("{}", map);
+        println!("{:?}", map);
         Ok(())
     }
 }

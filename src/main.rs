@@ -22,11 +22,11 @@ fn main() -> Result<()> {
     let input_file = handle_cli();
     let input = Input::try_from(PathBuf::from(input_file))?;
 
-    println!("{}", input);
+    println!("{:?}", input);
     for rule in input.rules {
         let table = TruthTable::try_from(PermutationIter::new(&rule))
             .context(format!("Failed to parse rule {}", rule))?;
-        println!("{}\n{}", rule, table);
+        println!("{}\n{:?}", rule, table);
     }
 
     Ok(())
