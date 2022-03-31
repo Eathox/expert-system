@@ -238,7 +238,7 @@ impl fmt::Display for TruthTable {
             }
             writeln!(f, "| {} |", if *result { 1 } else { 0 })?;
         }
-        write!(f, "")
+        Ok(())
     }
 }
 
@@ -304,10 +304,16 @@ where
 
 impl fmt::Display for RuleMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (k, v) in self.map.iter() {
+        let mut map = self.map.iter().peekable();
+        while let Some((k, v)) = map.next() {
             writeln!(f, "{}", k)?;
-            for t in v.iter() {
-                writeln!(f, "{}", t)?;
+            let mut table = v.iter().peekable();
+            while let Some(t) = table.next() {
+                if map.peek().is_none() && table.peek().is_none() {
+                    write!(f, "{}", t)?;
+                } else {
+                    writeln!(f, "{}", t)?;
+                }
             }
         }
         Ok(())
@@ -414,7 +420,10 @@ mod truth_table {
     fn error_invalid_rule() {
         let result = TruthTable::try_from(PermutationIter::new("A = B"));
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Failed to evaluate permutation 0 = 0");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to evaluate permutation 0 = 0"
+        );
     }
 }
 
