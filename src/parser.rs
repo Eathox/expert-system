@@ -244,7 +244,7 @@ impl fmt::Display for TruthTable {
 
 // Structure that maps for all identifiers the related truth tables.
 #[derive(Default, Eq, PartialEq)]
-struct RuleMap {
+pub struct RuleMap {
     map: HashMap<char, HashSet<Rc<TruthTable>>>,
 }
 

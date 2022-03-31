@@ -106,11 +106,8 @@ fn main() -> Result<()> {
     let input = Input::try_from(PathBuf::from(input_file))?;
 
     println!("{}", input);
-    for rule in input.rules {
-        let table = TruthTable::try_from(PermutationIter::new(&rule))
-            .context(format!("Failed to parse rule {}", rule))?;
-        println!("{}\n{}", rule, table);
-    }
+    let table = RuleMap::try_from(input.rules).context("Failed to parse rule")?;
+    println!("{}", table);
 
     Ok(())
 }
