@@ -412,7 +412,7 @@ mod truth_table {
 }
 
 #[cfg(test)]
-mod rulemap {
+mod rule_map {
     use super::*;
 
     use anyhow::Result;
