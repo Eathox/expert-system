@@ -49,14 +49,14 @@ where
         let mut queries: Option<String> = None;
         for line in lines.iter_mut() {
             match line {
-                l if l.starts_with("=") || l.starts_with("?") => match l.remove(0) {
+                l if l.starts_with('=') || l.starts_with('?') => match l.remove(0) {
                     '=' => match facts {
                         None => facts = Some(l.to_string()),
-                        Some(_) => Err(anyhow!("Multiple facts found in input file"))?,
+                        Some(_) => return Err(anyhow!("Multiple facts found in input file")),
                     },
                     '?' => match queries {
                         None => queries = Some(l.to_string()),
-                        Some(_) => Err(anyhow!("Multiple queries found in input file"))?,
+                        Some(_) => return Err(anyhow!("Multiple queries found in input file")),
                     },
                     _ => unreachable!(),
                 },
@@ -67,11 +67,11 @@ where
 
         let facts = facts.context("No facts in input file")?;
         if let Some(c) = facts.chars().find(|c| !is_identifier(c)) {
-            Err(anyhow!("Invalid identifier in facts: '{}'", c))?
+            return Err(anyhow!("Invalid identifier in facts: '{}'", c));
         }
         let queries = queries.context("No queries in input file")?;
         if let Some(c) = queries.chars().find(|c| !is_identifier(c)) {
-            Err(anyhow!("Invalid identifier in query: '{}'", c))?
+            return Err(anyhow!("Invalid identifier in query: '{}'", c));
         }
 
         let mut fact_set = HashSet::new();
