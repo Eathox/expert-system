@@ -201,6 +201,28 @@ impl TruthTable {
     }
 }
 
+impl TruthTable {
+    pub fn get_reduced(&self, identifier: char, fact: bool) -> Option<Self> {
+        let pos = self
+            .variables
+            .iter()
+            .position(|&r| r == identifier)
+            .unwrap();
+        let mut variables = self.variables.clone();
+        variables.retain(|&x| x != identifier);
+        let results: Vec<bool> = self
+            .results
+            .chunks(2_i32.pow((variables.len() - pos) as u32) as usize)
+            .skip(if fact { 1 } else { 0 })
+            .step_by(2)
+            .flatten()
+            .map(|b| *b)
+            .collect();
+
+        Some(TruthTable { variables, results })
+    }
+}
+
 impl TryFrom<PermutationIter> for TruthTable {
     type Error = anyhow::Error;
 
@@ -243,9 +265,11 @@ impl fmt::Display for TruthTable {
 
 // Structure that maps for all identifiers the related truth tables.
 #[derive(Default, Eq, PartialEq)]
-struct RuleMap {
+pub struct RuleMap {
     map: HashMap<char, HashSet<Rc<TruthTable>>>,
 }
+
+pub type Span = HashSet<Rc<TruthTable>>;
 
 impl RuleMap {
     // To insert a new rule in the rulemap Ad-Hoc
@@ -272,6 +296,10 @@ impl RuleMap {
             self.insert(rule)?
         }
         Ok(())
+    }
+
+    pub fn get_span_ref(&mut self, key: char) -> Option<&Span> {
+        self.map.get(&key)
     }
 }
 
@@ -403,6 +431,46 @@ mod truth_table {
             table.results,
             vec![true, false, true, false, true, false, false, true]
         );
+        Ok(())
+    }
+
+    #[test]
+    fn reduced_true() -> Result<()> {
+        let table = TruthTable::try_from(PermutationIter::new("A + B <=> !C"))?;
+        assert_eq!(table.variables, vec!['A', 'B', 'C']);
+        assert_eq!(
+            table.results,
+            vec![false, true, false, true, false, true, true, false]
+        );
+        let reduced = table.get_reduced('A', true).unwrap();
+        assert_eq!(reduced.variables, vec!['B', 'C']);
+        assert_eq!(reduced.results, vec![false, true, true, false]);
+        let reduced = table.get_reduced('B', true).unwrap();
+        assert_eq!(reduced.variables, vec!['A', 'C']);
+        assert_eq!(reduced.results, vec![false, true, true, false]);
+        let reduced = table.get_reduced('C', true).unwrap();
+        assert_eq!(reduced.variables, vec!['A', 'B']);
+        assert_eq!(reduced.results, vec![true, true, true, false]);
+        Ok(())
+    }
+
+    #[test]
+    fn reduced_false() -> Result<()> {
+        let table = TruthTable::try_from(PermutationIter::new("A + B <=> !C"))?;
+        assert_eq!(table.variables, vec!['A', 'B', 'C']);
+        assert_eq!(
+            table.results,
+            vec![false, true, false, true, false, true, true, false]
+        );
+        let reduced = table.get_reduced('A', false).unwrap();
+        assert_eq!(reduced.variables, vec!['B', 'C']);
+        assert_eq!(reduced.results, vec![false, true, false, true]);
+        let reduced = table.get_reduced('B', false).unwrap();
+        assert_eq!(reduced.variables, vec!['A', 'C']);
+        assert_eq!(reduced.results, vec![false, true, false, true]);
+        let reduced = table.get_reduced('C', false).unwrap();
+        assert_eq!(reduced.variables, vec!['A', 'B']);
+        assert_eq!(reduced.results, vec![false, false, false, true]);
         Ok(())
     }
 }

@@ -106,6 +106,9 @@ fn main() -> Result<()> {
     let input = Input::try_from(PathBuf::from(input_file))?;
 
     println!("{}", input);
+
+    // let rulemap = input.rules.try_from().context("Failed to build Rulemap from input rules")?;
+
     for rule in input.rules {
         let table = TruthTable::try_from(PermutationIter::new(&rule))
             .context(format!("Failed to parse rule {}", rule))?;
@@ -113,6 +116,64 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+struct Executor {
+    rulemap: RuleMap,
+    facts: Vec<char>,
+    queries: Vec<char>,
+}
+
+impl Executor {
+    pub fn solve(&mut self) {
+        for query in self.queries.iter() {
+            let get = self.rulemap.get_span_ref(*query).unwrap();
+            for g in get.iter() {
+                let mut h = g.as_ref().clone();
+                println!("{}", h);
+            }
+        }
+    }
+}
+
+impl TryFrom<Input> for Executor {
+    type Error = anyhow::Error;
+
+    fn try_from(input: Input) -> Result<Self, Self::Error> {
+        let rulemap = RuleMap::try_from(input.rules).context("Failed to build executor")?;
+        Ok(Executor {
+            rulemap,
+            facts: input.facts.chars().collect(),
+            queries: input.queries.chars().collect(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod executor {
+    use super::*;
+
+    use anyhow::Result;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn executor() -> Result<()> {
+        let input = Input {
+            rules: vec![
+                "A + Z => B".to_string(),
+                "B => C".to_string(),
+                "C <=> D + E".to_string(),
+                "E | F => G".to_string(),
+                "G => H".to_string(),
+            ],
+            facts: "AZ".to_string(),
+            queries: "G".to_string(),
+        };
+        let mut executor = Executor::try_from(input)?;
+        executor.solve();
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
