@@ -54,9 +54,6 @@ impl TryFrom<PathBuf> for Input {
             }
         }
 
-        if rules.is_empty() {
-            Err(anyhow!("No rules in input file"))?
-        }
         let facts = facts.context("No facts in input file")?;
         if let Some(c) = facts.chars().find(|c| !is_identifier(c)) {
             Err(anyhow!("Invalid identifier in facts: '{}'", c))?
@@ -209,19 +206,26 @@ mod input {
     }
 
     #[test]
+    fn no_rules() -> Result<()> {
+        let input_file = test_utils::input_file_path("input/no_rules.txt");
+        let result = Input::try_from(input_file)?;
+        assert_eq!(
+            result,
+            Input {
+                rules: vec![],
+                facts: "ABC".to_string(),
+                queries: "ZYX".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
     fn error_empty() {
         let input_file = test_utils::input_file_path("input/empty.txt");
         let result = Input::try_from(input_file);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "No rules in input file");
-    }
-
-    #[test]
-    fn error_no_rules() {
-        let input_file = test_utils::input_file_path("input/no_rules.txt");
-        let result = Input::try_from(input_file);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "No rules in input file");
+        assert_eq!(result.unwrap_err().to_string(), "No facts in input file");
     }
 
     #[test]
