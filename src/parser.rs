@@ -1,6 +1,7 @@
 use crate::*;
 
 use anyhow::{anyhow, Context, Result};
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::iter::Peekable;
@@ -277,21 +278,18 @@ impl RuleMap {
 
 impl<T> TryFrom<Vec<T>> for RuleMap
 where
-    T: AsRef<str>,
+    T: Borrow<str>,
 {
     type Error = anyhow::Error;
 
-    fn try_from(rules: Vec<T>) -> Result<Self>
-    where
-        T: AsRef<str>,
-    {
-        let ruleset = rules
+    fn try_from(rules: Vec<T>) -> Result<Self> {
+        let rule_set = rules
             .into_iter()
-            .map(|s| TruthTable::try_from(PermutationIter::new(s)))
+            .map(|s| TruthTable::try_from(PermutationIter::new(s.borrow())))
             .collect::<Result<Vec<TruthTable>>>()
             .context("Unable to build RuleMap")?;
         let mut map = HashMap::new();
-        for rule in ruleset.into_iter() {
+        for rule in rule_set.into_iter() {
             let ptr = Rc::new(rule);
             for v in ptr.variables.iter() {
                 let tables = map
