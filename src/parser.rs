@@ -187,7 +187,7 @@ impl Iterator for PermutationIter {
 // `0 => 1` implies index 0b01, results[1]
 // `1 => 0` implies index 0b10, results[2]
 // `1 => 1` implies index 0b11, results[3]
-#[derive(Default, Eq, PartialEq, Hash, Clone)]
+#[derive(Default, Debug, Eq, PartialEq, Hash, Clone)]
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
@@ -393,21 +393,28 @@ mod truth_table {
 
     #[test]
     fn simple() -> Result<()> {
-        let table = TruthTable::try_from(PermutationIter::new("A => Z"))?;
-        assert_eq!(table.variables, vec!['A', 'Z']);
-        assert_eq!(table.results, vec![true, true, false, true]);
+        let result = TruthTable::try_from(PermutationIter::new("A => Z"))?;
+        assert_eq!(result.variables, vec!['A', 'Z']);
+        assert_eq!(result.results, vec![true, true, false, true]);
         Ok(())
     }
 
     #[test]
-    fn test_valid_rule() -> Result<()> {
-        let table = TruthTable::try_from(PermutationIter::new("A + B <=> C"))?;
-        assert_eq!(table.variables, vec!['A', 'B', 'C']);
+    fn valid_rule() -> Result<()> {
+        let result = TruthTable::try_from(PermutationIter::new("A + B <=> C"))?;
+        assert_eq!(result.variables, vec!['A', 'B', 'C']);
         assert_eq!(
-            table.results,
+            result.results,
             vec![true, false, true, false, true, false, false, true]
         );
         Ok(())
+    }
+
+    #[test]
+    fn error_invalid_rule() {
+        let result = TruthTable::try_from(PermutationIter::new("A = B"));
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Failed to evaluate permutation 0 = 0");
     }
 }
 
