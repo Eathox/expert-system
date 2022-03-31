@@ -315,7 +315,7 @@ impl fmt::Display for RuleMap {
 }
 
 #[cfg(test)]
-mod purmutation_iter {
+mod permutation_iter {
     use super::*;
 
     use pretty_assertions::assert_eq;
