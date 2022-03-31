@@ -367,6 +367,12 @@ mod purmutation_iter {
         assert_eq!(Some("0 + 0 <=> 0".to_string()), iter.next());
         assert_eq!(Some("0 + 0 <=> 1".to_string()), iter.next());
         assert_eq!(Some("0 + 1 <=> 0".to_string()), iter.next());
+        assert_eq!(Some("0 + 1 <=> 1".to_string()), iter.next());
+        assert_eq!(Some("1 + 0 <=> 0".to_string()), iter.next());
+        assert_eq!(Some("1 + 0 <=> 1".to_string()), iter.next());
+        assert_eq!(Some("1 + 1 <=> 0".to_string()), iter.next());
+        assert_eq!(Some("1 + 1 <=> 1".to_string()), iter.next());
+        assert_eq!(None, iter.next());
     }
 
     #[test]
