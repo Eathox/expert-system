@@ -40,39 +40,39 @@ impl<'a> RuleParser {
                 ('=', '>') => Ok(Direction::UniDirectional),
                 ('<', '=') => match lexer.next() {
                     Some('>') => Ok(Direction::BiDirectional),
-                    _ => Err(anyhow!("Unable to finish lexing inplicator")),
+                    _ => Err(anyhow!("Unable to finish lexing implicator")),
                 },
-                _ => Err(anyhow!("Unable to finish lexing inplicator")),
+                _ => Err(anyhow!("Unable to finish lexing implicator")),
             }
         } else {
-            Err(anyhow!("Unable to finish lexing inplicator"))
+            Err(anyhow!("Unable to finish lexing implicator"))
         }
     }
 
     pub fn tokenize(&mut self, input: &str) -> Result<Vec<Token>> {
         let mut lexer = input.chars().peekable();
-        let mut tokenlist: Vec<Token> = Vec::new();
+        let mut token_list: Vec<Token> = Vec::new();
         while let Some(c) = lexer.next() {
             match c {
-                '(' | ')' => tokenlist.push(Parenthesis(c)),
-                '!' | '+' | '|' | '^' => tokenlist.push(Operator(c)),
-                '=' | '<' => tokenlist.push(Implicator(self.get_direction(&mut lexer, c)?)),
-                '0' => tokenlist.push(Bool(false)),
-                '1' => tokenlist.push(Bool(true)),
+                '(' | ')' => token_list.push(Parenthesis(c)),
+                '!' | '+' | '|' | '^' => token_list.push(Operator(c)),
+                '=' | '<' => token_list.push(Implicator(self.get_direction(&mut lexer, c)?)),
+                '0' => token_list.push(Bool(false)),
+                '1' => token_list.push(Bool(true)),
                 c if c.is_whitespace() => {}
                 _ => return Err(anyhow!("Unexpected character: {}", c)),
             }
         }
-        Ok(tokenlist)
+        Ok(token_list)
     }
 
-    fn get_rule<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
+    fn get_rule<I>(&mut self, token_list: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
-        let antecedent = self.get_operator(tokenlist)?;
-        if let Some(implicator) = tokenlist.next() {
-            let consequent = self.get_operator(tokenlist)?;
+        let antecedent = self.get_operator(token_list)?;
+        if let Some(implicator) = token_list.next() {
+            let consequent = self.get_operator(token_list)?;
             match implicator {
                 Implicator(direction) => match direction {
                     Direction::UniDirectional => Ok(!antecedent | consequent),
@@ -85,43 +85,43 @@ impl<'a> RuleParser {
         }
     }
 
-    fn get_operator<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
+    fn get_operator<I>(&mut self, token_list: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
-        let mut node = self.get_factor(tokenlist);
-        while let Some(Operator(op)) = tokenlist.peek() {
-            node = match tokenlist.next() {
-                Some(Operator('+')) => Ok(node? & self.get_factor(tokenlist)?),
-                Some(Operator('|')) => Ok(node? | self.get_factor(tokenlist)?),
-                Some(Operator('^')) => Ok(node? ^ self.get_factor(tokenlist)?),
+        let mut node = self.get_factor(token_list);
+        while let Some(Operator(op)) = token_list.peek() {
+            node = match token_list.next() {
+                Some(Operator('+')) => Ok(node? & self.get_factor(token_list)?),
+                Some(Operator('|')) => Ok(node? | self.get_factor(token_list)?),
+                Some(Operator('^')) => Ok(node? ^ self.get_factor(token_list)?),
                 _ => Err(anyhow!("Found unexpected operator: {:?}", op)),
             }
         }
         node
     }
 
-    fn get_factor<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
+    fn get_factor<I>(&mut self, token_list: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
-        match tokenlist.next() {
+        match token_list.next() {
             Some(Parenthesis('(')) => {
-                let res = self.get_operator(tokenlist);
-                match tokenlist.next() {
+                let res = self.get_operator(token_list);
+                match token_list.next() {
                     Some(Parenthesis(')')) => res,
                     _ => Err(anyhow!("Missing closing parenthesis")),
                 }
             }
-            Some(Operator('!')) => Ok(!self.get_factor(tokenlist)?),
+            Some(Operator('!')) => Ok(!self.get_factor(token_list)?),
             Some(Bool(b)) => Ok(*b),
             _ => Err(anyhow!("Unexpected end of token list")),
         }
     }
 
     pub fn evaluate(&mut self, input: &str) -> Result<bool> {
-        let tokenlist = self.tokenize(input).context("Could not tokenize input")?;
-        self.get_rule(&mut tokenlist.iter().peekable())
+        let token_list = self.tokenize(input).context("Could not tokenize input")?;
+        self.get_rule(&mut token_list.iter().peekable())
             .context("Syntactical error")
     }
 }
