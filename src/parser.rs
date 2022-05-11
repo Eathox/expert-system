@@ -31,7 +31,7 @@ impl<'a> RuleParser {
         RuleParser {}
     }
 
-    fn get_direction<I>(&mut self, lexer: &mut Peekable<I>, c: char) -> Result<Direction>
+    fn get_direction<I>(&mut self, lexer: &mut I, c: char) -> Result<Direction>
     where
         I: Iterator<Item = char>,
     {
@@ -50,7 +50,7 @@ impl<'a> RuleParser {
     }
 
     pub fn tokenize(&mut self, input: &str) -> Result<Vec<Token>> {
-        let mut lexer = input.chars().peekable();
+        let mut lexer = input.chars();
         let mut token_list: Vec<Token> = Vec::new();
         while let Some(c) = lexer.next() {
             match c {
@@ -78,10 +78,10 @@ impl<'a> RuleParser {
                     Direction::UniDirectional => Ok(!antecedent | consequent),
                     Direction::BiDirectional => Ok(antecedent == consequent),
                 },
-                _ => Err(anyhow!("No implicator found")),
+                _ => unreachable!(),
             }
         } else {
-            Err(anyhow!("Unexpected end of token list"))
+            Err(anyhow!("No implicator found"))
         }
     }
 
@@ -90,12 +90,12 @@ impl<'a> RuleParser {
         I: Iterator<Item = &'a Token>,
     {
         let mut node = self.get_factor(token_list);
-        while let Some(Operator(op)) = token_list.peek() {
+        while let Some(Operator(_)) = token_list.peek() {
             node = match token_list.next() {
                 Some(Operator('+')) => Ok(node? & self.get_factor(token_list)?),
                 Some(Operator('|')) => Ok(node? | self.get_factor(token_list)?),
                 Some(Operator('^')) => Ok(node? ^ self.get_factor(token_list)?),
-                _ => Err(anyhow!("Found unexpected operator: {:?}", op)),
+                _ => unreachable!(),
             }
         }
         node
@@ -115,14 +115,16 @@ impl<'a> RuleParser {
             }
             Some(Operator('!')) => Ok(!self.get_factor(token_list)?),
             Some(Bool(b)) => Ok(*b),
-            _ => Err(anyhow!("Unexpected end of token list")),
+            Some(t) => Err(anyhow!("Invalid factor token '{:?}'", t)),
+            None => Err(anyhow!("Unexpected end of token list")),
         }
     }
 
     pub fn evaluate(&mut self, input: &str) -> Result<bool> {
-        let token_list = self.tokenize(input).context("Could not tokenize input")?;
+        let token_list = self
+            .tokenize(input)
+            .context(format!("Failed to tokenize input: '{}'", input))?;
         self.get_rule(&mut token_list.iter().peekable())
-            .context("Syntactical error")
     }
 }
 
@@ -268,6 +270,166 @@ impl fmt::Debug for RuleMap {
 }
 
 #[cfg(test)]
+mod tests_rule_parser {
+    use super::*;
+
+    use anyhow::Result;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn uni_directional() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 => 0")?, false);
+        assert_eq!(parser.evaluate("0 => 1")?, true);
+        assert_eq!(parser.evaluate("1 => 1")?, true);
+        assert_eq!(parser.evaluate("0 => 0")?, true);
+        Ok(())
+    }
+
+    #[test]
+    fn bi_directional() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 <=> 0")?, false);
+        assert_eq!(parser.evaluate("0 <=> 1")?, false);
+        assert_eq!(parser.evaluate("1 <=> 1")?, true);
+        assert_eq!(parser.evaluate("0 <=> 0")?, true);
+        Ok(())
+    }
+
+    #[test]
+    fn not() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("!1 => 0")?, true);
+        assert_eq!(parser.evaluate("!0 => 0")?, false);
+
+        assert_eq!(parser.evaluate("1 => !1")?, false);
+        assert_eq!(parser.evaluate("1 => !0")?, true);
+        Ok(())
+    }
+
+    #[test]
+    fn and() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 + 1 => 0")?, false);
+        assert_eq!(parser.evaluate("1 + 0 => 0")?, true);
+        assert_eq!(parser.evaluate("0 + 1 => 0")?, true);
+        assert_eq!(parser.evaluate("0 + 0 => 0")?, true);
+
+        assert_eq!(parser.evaluate("1 => 1 + 1")?, true);
+        assert_eq!(parser.evaluate("1 => 0 + 1")?, false);
+        assert_eq!(parser.evaluate("1 => 1 + 0")?, false);
+        assert_eq!(parser.evaluate("1 => 0 + 0")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn or() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 | 1 => 0")?, false);
+        assert_eq!(parser.evaluate("1 | 0 => 0")?, false);
+        assert_eq!(parser.evaluate("0 | 1 => 0")?, false);
+        assert_eq!(parser.evaluate("0 | 0 => 0")?, true);
+
+        assert_eq!(parser.evaluate("1 => 1 | 1")?, true);
+        assert_eq!(parser.evaluate("1 => 1 | 0")?, true);
+        assert_eq!(parser.evaluate("1 => 0 | 1")?, true);
+        assert_eq!(parser.evaluate("1 => 0 | 0")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn xor() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 ^ 1 => 0")?, true);
+        assert_eq!(parser.evaluate("1 ^ 0 => 0")?, false);
+        assert_eq!(parser.evaluate("0 ^ 1 => 0")?, false);
+        assert_eq!(parser.evaluate("0 ^ 0 => 0")?, true);
+
+        assert_eq!(parser.evaluate("1 => 1 ^ 1")?, false);
+        assert_eq!(parser.evaluate("1 => 1 ^ 0")?, true);
+        assert_eq!(parser.evaluate("1 => 0 ^ 1")?, true);
+        assert_eq!(parser.evaluate("1 => 0 ^ 0")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn parenthesis() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 | 0 + 0 => 0")?, true);
+        assert_eq!(parser.evaluate("(1 | 0) + 0 => 0")?, true);
+        assert_eq!(parser.evaluate("1 | (0 + 0) => 0")?, false);
+        assert_eq!(parser.evaluate("0 + 0 | 1 => 0")?, false);
+        assert_eq!(parser.evaluate("(0 + 0) | 1 => 0")?, false);
+        assert_eq!(parser.evaluate("0 + (0 | 1) => 0")?, true);
+
+        assert_eq!(parser.evaluate("1 => 1 | 0 + 0")?, false);
+        assert_eq!(parser.evaluate("1 => (1 | 0) + 0")?, false);
+        assert_eq!(parser.evaluate("1 => 1 | (0 + 0)")?, true);
+        assert_eq!(parser.evaluate("1 => 0 + 0 | 1")?, true);
+        assert_eq!(parser.evaluate("1 => (0 + 0) | 1")?, true);
+        assert_eq!(parser.evaluate("1 => 0 + (0 | 1)")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn error_empty() {
+        let result = RuleParser::new().evaluate("");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Unexpected end of token list"
+        );
+    }
+
+    #[test]
+    fn error_invalid_state() {
+        let result = RuleParser::new().evaluate("A => Z");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to tokenize input: 'A => Z'"
+        );
+    }
+
+    #[test]
+    fn error_invalid_operator() {
+        let result = RuleParser::new().evaluate("0 = 1");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to tokenize input: '0 = 1'"
+        );
+    }
+
+    #[test]
+    fn error_missing_operator_half() {
+        let result = RuleParser::new().evaluate("0 | => 0");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Invalid factor token 'Implicator(UniDirectional)'"
+        );
+    }
+
+    #[test]
+    fn error_missing_implicator() {
+        let result = RuleParser::new().evaluate("0");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "No implicator found");
+    }
+
+    #[test]
+    fn error_missing_parenthesis() {
+        let result = RuleParser::new().evaluate("(0 => 0");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing closing parenthesis"
+        );
+    }
+}
+
+#[cfg(test)]
 mod tests_truth_table {
     use super::*;
 
@@ -283,19 +445,8 @@ mod tests_truth_table {
     }
 
     #[test]
-    fn valid_rule() -> Result<()> {
-        let result = TruthTable::try_from(PermutationIter::new("A + B <=> C"))?;
-        assert_eq!(result.variables, vec!['A', 'B', 'C']);
-        assert_eq!(
-            result.results,
-            vec![true, false, true, false, true, false, false, true]
-        );
-        Ok(())
-    }
-
-    #[test]
     fn error_invalid_rule() {
-        let result = TruthTable::try_from(PermutationIter::new("A = B"));
+        let result = TruthTable::try_from(PermutationIter::new("A = Z"));
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
