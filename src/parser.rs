@@ -201,7 +201,7 @@ impl RuleMap {
     // Inserts a new rule in the rulemap Ad-Hoc
     pub fn insert<T>(&mut self, rule: T) -> Result<()>
     where
-        T: AsRef<str>,
+        T: Borrow<str>,
     {
         let ptr = Rc::new(TruthTable::try_from(PermutationIter::new(rule))?);
         for v in ptr.variables.iter() {
@@ -216,10 +216,10 @@ impl RuleMap {
 
     pub fn insert_vec<T>(&mut self, rules: Vec<T>) -> Result<()>
     where
-        T: AsRef<str>,
+        T: Borrow<str>,
     {
         for rule in rules.iter() {
-            self.insert(rule)?
+            self.insert(rule.borrow())?
         }
         Ok(())
     }

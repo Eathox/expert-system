@@ -1,5 +1,6 @@
 use crate::*;
 
+use std::borrow::Borrow;
 use std::collections::HashSet;
 
 // PermutationIter is an iterator that iterates over all permutations of a rule input string
@@ -16,8 +17,11 @@ pub struct PermutationIter {
 }
 
 impl PermutationIter {
-    pub fn new(formula: impl AsRef<str>) -> PermutationIter {
-        let formula = formula.as_ref().to_owned();
+    pub fn new<T>(formula: T) -> PermutationIter
+    where
+        T: Borrow<str>,
+    {
+        let formula = formula.borrow().to_owned();
         let mut set = HashSet::new();
         let mut variables = formula
             .chars()
