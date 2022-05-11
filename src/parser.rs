@@ -191,14 +191,14 @@ impl fmt::Debug for TruthTable {
     }
 }
 
-// Structure that maps for all identifiers the related truth tables.
+// Structure that holds key pairs of identifier and all related truth tables.
 #[derive(Default, Eq, PartialEq)]
 pub struct RuleMap {
     map: HashMap<char, HashSet<Rc<TruthTable>>>,
 }
 
 impl RuleMap {
-    // To insert a new rule in the rulemap Ad-Hoc
+    // Inserts a new rule in the rulemap Ad-Hoc
     pub fn insert<T>(&mut self, rule: T) -> Result<()>
     where
         T: AsRef<str>,
@@ -456,7 +456,7 @@ mod tests_truth_table {
 }
 
 #[cfg(test)]
-mod rule_map {
+mod tests_rule_map {
     use super::*;
 
     use anyhow::Result;
