@@ -1,7 +1,8 @@
-extern crate expert_system;
-use expert_system::USAGE;
-
 mod test_utils;
+
+#[cfg(test)]
+#[path = "../src/usage.rs"]
+pub mod usage;
 
 use assert_cmd::assert::*;
 use assert_cmd::cargo::CommandCargoExt;
@@ -46,12 +47,12 @@ fn example_input() {
 
 #[test]
 fn error_usage_no_arguments() {
-    run_cmd!().failure().stderr(USAGE);
+    run_cmd!().failure().stderr(usage::USAGE);
 }
 
 #[test]
 fn error_usage_to_many_arguments() {
-    run_cmd!("foo", "bar").failure().stderr(USAGE);
+    run_cmd!("foo", "bar").failure().stderr(usage::USAGE);
 }
 
 #[test]

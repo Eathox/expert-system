@@ -1,4 +1,4 @@
-use crate::*;
+use super::*;
 
 use std::borrow::Borrow;
 use std::collections::HashSet;
@@ -61,7 +61,7 @@ impl Iterator for PermutationIter {
 }
 
 #[cfg(test)]
-mod tests_permutation_iter {
+mod tests {
     use super::*;
 
     use pretty_assertions::assert_eq;

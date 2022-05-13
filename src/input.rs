@@ -1,4 +1,6 @@
-use crate::*;
+use crate::logic::is_identifier;
+use crate::sanitize_lines::*;
+use crate::utils::*;
 
 use anyhow::{anyhow, Context, Result};
 use core::fmt;
@@ -40,7 +42,7 @@ where
     type Error = anyhow::Error;
 
     fn try_from(lines: Vec<T>) -> Result<Self, Self::Error> {
-        let mut lines = sanitize::sanitize_lines(&lines);
+        let mut lines = sanitize_lines(&lines);
 
         let mut rules: Vec<String> = vec![];
         let mut facts: Option<String> = None;
@@ -89,9 +91,9 @@ where
 }
 
 #[cfg(test)]
-mod tests_input {
+mod tests {
     use super::*;
-    use crate::test_utils;
+    use crate::utils::test_utils;
 
     use anyhow::Result;
     use pretty_assertions::assert_eq;
