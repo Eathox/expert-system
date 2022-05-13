@@ -192,7 +192,7 @@ impl fmt::Debug for TruthTable {
 }
 
 // Structure that holds key pairs of identifier and all related truth tables.
-#[derive(Default, Eq, PartialEq)]
+#[derive(Default)]
 pub struct RuleMap {
     map: HashMap<char, HashSet<Rc<TruthTable>>>,
 }
@@ -203,7 +203,12 @@ impl RuleMap {
     where
         T: Borrow<str>,
     {
-        let ptr = Rc::new(TruthTable::try_from(PermutationIter::new(rule))?);
+        let ptr = Rc::new(
+            TruthTable::try_from(PermutationIter::new(rule.borrow())).context(format!(
+                "Failed to create truth table from: '{}'",
+                rule.borrow()
+            ))?,
+        );
         for v in ptr.variables.iter() {
             let tables = self
                 .map
@@ -232,22 +237,9 @@ where
     type Error = anyhow::Error;
 
     fn try_from(rules: Vec<T>) -> Result<Self> {
-        let rule_set = rules
-            .into_iter()
-            .map(|s| TruthTable::try_from(PermutationIter::new(s.borrow())))
-            .collect::<Result<Vec<TruthTable>>>()
-            .context("Unable to build RuleMap")?;
-        let mut map = HashMap::new();
-        for rule in rule_set.into_iter() {
-            let ptr = Rc::new(rule);
-            for v in ptr.variables.iter() {
-                let tables = map
-                    .entry(*v)
-                    .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
-                tables.insert(Rc::clone(&ptr));
-            }
-        }
-        Ok(RuleMap { map })
+        let mut map = RuleMap::default();
+        map.insert_vec(rules)?;
+        Ok(map)
     }
 }
 
@@ -464,16 +456,55 @@ mod tests_rule_map {
 
     #[test]
     fn empty() -> Result<()> {
+        let result = RuleMap::try_from(Vec::<String>::new())?;
+        assert!(result.map.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn from() -> Result<()> {
+        let result = RuleMap::try_from(vec!["A => B", "B => C"])?;
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
         Ok(())
     }
 
     #[test]
     fn insert() -> Result<()> {
+        let mut result = RuleMap::try_from(Vec::<String>::new())?;
+        result.insert("A => B")?;
+        assert_eq!(result.map.len(), 2);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 1);
+
+        result.insert("B => C")?;
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
         Ok(())
     }
 
     #[test]
     fn insert_vec() -> Result<()> {
+        let mut result = RuleMap::try_from(Vec::<String>::new())?;
+        result.insert_vec(vec!["A => B", "B => C"])?;
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
         Ok(())
+    }
+
+    #[test]
+    fn error_invalid_rule() {
+        let result = RuleMap::try_from(vec!["A =>"]);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to create truth table from: 'A =>'"
+        );
     }
 }
