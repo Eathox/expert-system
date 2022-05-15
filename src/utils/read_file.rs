@@ -7,7 +7,10 @@ use std::{
     str::FromStr,
 };
 
-pub fn read_file<T: FromStr>(file: &impl AsRef<Path>) -> Result<Vec<T>> {
+pub fn read_file<T>(file: &impl AsRef<Path>) -> Result<Vec<T>>
+where
+    T: FromStr,
+{
     let file = File::open(file).context("Failed to open file")?;
     let file_buf = BufReader::new(file);
 
