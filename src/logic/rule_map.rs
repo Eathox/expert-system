@@ -1,10 +1,12 @@
-use super::*;
+use super::TruthTable;
 
 use anyhow::{Context, Result};
-use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::rc::Rc;
+use std::{
+    borrow::Borrow,
+    collections::{HashMap, HashSet},
+    fmt,
+    rc::Rc,
+};
 
 // Structure that holds key pairs of identifier and all related truth tables.
 #[derive(Default)]
@@ -13,47 +15,67 @@ pub struct RuleMap {
 }
 
 impl RuleMap {
-    // Inserts a new rule in the rulemap Ad-Hoc
-    pub fn insert<T>(&mut self, rule: T) -> Result<()>
+    pub fn insert(&mut self, table: TruthTable) {
+        let ptr = Rc::new(table);
+        for v in ptr.variables.iter() {
+            let tables = self.map.entry(*v).or_insert_with(|| HashSet::new());
+            tables.insert(Rc::clone(&ptr));
+        }
+    }
+
+    pub fn insert_vec(&mut self, tables: Vec<TruthTable>) {
+        for table in tables {
+            self.insert(table);
+        }
+    }
+
+    pub fn insert_rule<T>(&mut self, rule: T) -> Result<()>
     where
         T: Borrow<str>,
     {
-        let ptr = Rc::new(
-            TruthTable::try_from(PermutationIter::new(rule.borrow())).context(format!(
-                "Failed to create truth table from: '{}'",
-                rule.borrow()
-            ))?,
-        );
-        for v in ptr.variables.iter() {
-            let tables = self
-                .map
-                .entry(*v)
-                .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
-            tables.insert(Rc::clone(&ptr));
-        }
+        let table = TruthTable::try_from(rule.borrow()).context(format!(
+            "Failed to create truth table from: '{}'",
+            rule.borrow()
+        ))?;
+        self.insert(table);
         Ok(())
     }
 
-    pub fn insert_vec<T>(&mut self, rules: Vec<T>) -> Result<()>
+    pub fn insert_rule_vec<T>(&mut self, rules: Vec<T>) -> Result<()>
     where
         T: Borrow<str>,
     {
-        for rule in rules.iter() {
-            self.insert(rule.borrow())?
+        for rule in rules {
+            self.insert_rule(rule.borrow())?;
         }
         Ok(())
     }
 }
 
-impl<T> TryFrom<Vec<T>> for RuleMap
-where
-    T: Borrow<str>,
-{
+impl From<Vec<TruthTable>> for RuleMap {
+    fn from(tables: Vec<TruthTable>) -> Self {
+        let mut map = RuleMap::default();
+        map.insert_vec(tables);
+        map
+    }
+}
+
+impl TryFrom<Vec<&str>> for RuleMap {
     type Error = anyhow::Error;
 
-    fn try_from(rules: Vec<T>) -> Result<Self> {
+    fn try_from(rules: Vec<&str>) -> Result<Self> {
         let mut map = RuleMap::default();
-        map.insert_vec(rules)?;
+        map.insert_rule_vec(rules)?;
+        Ok(map)
+    }
+}
+
+impl TryFrom<Vec<String>> for RuleMap {
+    type Error = anyhow::Error;
+
+    fn try_from(rules: Vec<String>) -> Result<Self> {
+        let mut map = RuleMap::default();
+        map.insert_rule_vec(rules)?;
         Ok(map)
     }
 }
@@ -85,7 +107,7 @@ mod tests {
 
     #[test]
     fn empty() -> Result<()> {
-        let result = RuleMap::try_from(Vec::<String>::new())?;
+        let result = RuleMap::default();
         assert!(result.map.is_empty());
         Ok(())
     }
@@ -102,13 +124,13 @@ mod tests {
 
     #[test]
     fn insert() -> Result<()> {
-        let mut result = RuleMap::try_from(Vec::<String>::new())?;
-        result.insert("A => B")?;
+        let mut result = RuleMap::default();
+        result.insert_rule("A => B")?;
         assert_eq!(result.map.len(), 2);
         assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
         assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 1);
 
-        result.insert("B => C")?;
+        result.insert_rule("B => C")?;
         assert_eq!(result.map.len(), 3);
         assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
         assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
@@ -118,8 +140,8 @@ mod tests {
 
     #[test]
     fn insert_vec() -> Result<()> {
-        let mut result = RuleMap::try_from(Vec::<String>::new())?;
-        result.insert_vec(vec!["A => B", "B => C"])?;
+        let mut result = RuleMap::default();
+        result.insert_rule_vec(vec!["A => B", "B => C"])?;
         assert_eq!(result.map.len(), 3);
         assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
         assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);

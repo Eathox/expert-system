@@ -1,4 +1,4 @@
-use super::*;
+use super::{evaluate_rule, PermutationIter};
 
 use anyhow::{Context, Result};
 use std::fmt;
@@ -11,26 +11,17 @@ use std::fmt;
 // `0 => 1` implies index 0b01, results[1]
 // `1 => 0` implies index 0b10, results[2]
 // `1 => 1` implies index 0b11, results[3]
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Default, Eq, PartialEq, Hash, Clone)]
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
 }
 
-impl TruthTable {
-    pub fn new() -> Self {
-        TruthTable {
-            variables: Vec::new(),
-            results: Vec::new(),
-        }
-    }
-}
-
 impl TryFrom<PermutationIter> for TruthTable {
     type Error = anyhow::Error;
 
-    fn try_from(mut permutation_iter: PermutationIter) -> Result<Self, Self::Error> {
-        let mut table = Self::new();
+    fn try_from(mut permutation_iter: PermutationIter) -> Result<Self> {
+        let mut table = Self::default();
         for permutation in permutation_iter.by_ref() {
             table.results.push(
                 evaluate_rule(&permutation)
@@ -39,6 +30,14 @@ impl TryFrom<PermutationIter> for TruthTable {
         }
         table.variables.append(&mut permutation_iter.variables);
         Ok(table)
+    }
+}
+
+impl TryFrom<&str> for TruthTable {
+    type Error = anyhow::Error;
+
+    fn try_from(str: &str) -> Result<Self> {
+        PermutationIter::from(str).try_into()
     }
 }
 
@@ -73,7 +72,7 @@ mod tests {
 
     #[test]
     fn simple() -> Result<()> {
-        let result = TruthTable::try_from(PermutationIter::new("A => Z"))?;
+        let result = TruthTable::try_from("A => Z")?;
         assert_eq!(result.variables, vec!['A', 'Z']);
         assert_eq!(result.results, vec![true, true, false, true]);
         Ok(())
@@ -81,7 +80,7 @@ mod tests {
 
     #[test]
     fn error_invalid_rule() {
-        let result = TruthTable::try_from(PermutationIter::new("A = Z"));
+        let result = TruthTable::try_from("A = Z");
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),

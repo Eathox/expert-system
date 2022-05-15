@@ -4,8 +4,7 @@ mod test_utils;
 #[path = "../src/usage.rs"]
 pub mod usage;
 
-use assert_cmd::assert::*;
-use assert_cmd::cargo::CommandCargoExt;
+use assert_cmd::{assert::*, cargo::CommandCargoExt};
 use std::process::Command;
 
 macro_rules! _run_cmd {

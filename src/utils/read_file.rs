@@ -7,8 +7,9 @@ use std::{
     str::FromStr,
 };
 
-pub fn read_file<T>(file: &impl AsRef<Path>) -> Result<Vec<T>>
+pub fn read_file<P, T>(file: P) -> Result<Vec<T>>
 where
+    P: AsRef<Path>,
     T: FromStr,
 {
     let file = File::open(file).context("Failed to open file")?;

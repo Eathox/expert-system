@@ -8,8 +8,7 @@ pub use rule_map::*;
 pub use rule_parser::*;
 pub use truth_table::*;
 
-use core::borrow::Borrow;
-use core::char;
+use std::{borrow::Borrow, char};
 
 pub fn is_identifier(c: impl Borrow<char>) -> bool {
     ('A'..='Z').contains(c.borrow())
