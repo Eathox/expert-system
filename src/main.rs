@@ -279,6 +279,24 @@ mod executor {
 
         Ok(())
     }
+
+    #[test]
+    fn executor4() -> Result<()> {
+        let input = Input {
+            rules: vec![
+                "A => B".into(),
+                "B => C".into(),
+                "C => D".into(),
+            ],
+            facts: "".into(),
+            queries: "D".into(),
+        };
+        let mut executor = Executor::try_from(input)?;
+        // println!("executor: {:#?}", executor);
+        executor.solve();
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
