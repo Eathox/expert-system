@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 indoc = "1.x"
 anyhow = "1.x"
+lazy_static = "1.4.0"
 
 [dev-dependencies]
 assert_cmd = "2.x"

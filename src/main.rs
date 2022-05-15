@@ -3,6 +3,7 @@ use expert_system::*;
 
 use anyhow::{anyhow, Context, Result};
 use core::fmt;
+use std::hash::Hasher;
 use parser::*;
 use std::{borrow::Borrow, collections::HashSet, env, path::PathBuf};
 
@@ -118,22 +119,85 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug)]
 struct Executor {
     rulemap: RuleMap,
-    facts: Vec<char>,
-    queries: Vec<char>,
+    facts: HashSet<char>,
+    queries: Vec<char>
+}
+
+#[macro_use] extern crate lazy_static;//
+use std::sync::Mutex;//
+
+lazy_static! {//
+    static ref CHECKED: Mutex<HashSet<u64>> = Mutex::new(HashSet::new());//
+}//
+
+use std::collections::hash_map::DefaultHasher;//
+use std::hash::Hash;//
+
+enum Proposition {
+    Contingency(bool),
+    Tautology,
+    Contradiction
+}
+
+impl From<Proposition> for bool {
+    fn from(item: Proposition) -> Self {
+        match item {
+            Proposition::Contradiction => false,
+            Proposition::Contingency(true) => true,
+            Proposition::Contingency(false) => false,
+            Proposition::Tautology => false,//
+        }
+    }
 }
 
 impl Executor {
-    pub fn solve(&mut self) {
-        for query in self.queries.iter() {
-            let get = self.rulemap.get_span_ref(*query).unwrap();
-            for g in get.iter() {
-                let mut h = g.as_ref().clone();
-                println!("{}", h);
+
+    fn solve_query(&self, query: char) -> Proposition {
+        if self.facts.contains(&query) {
+            println!("query: {}", query);
+            return Proposition::Contingency(true);
+        }
+        // let get = self.rulemap.get_span_ref(query).unwrap();
+        for rule in self.rulemap.get_span_ref(query).unwrap().iter() {
+            let mut reduced = rule.as_ref().clone();
+            let mut s = DefaultHasher::new();
+            (**rule).hash(&mut s);
+            let h = s.finish();
+            if !CHECKED.lock().unwrap().contains(&h) {
+                CHECKED.lock().unwrap().insert(h);
+                for var in rule.variables.iter() {
+                    if *var != query {
+                        println!("before\n{}", reduced);
+                        reduced = reduced.get_reduced(*var,  self.solve_query(*var).into()).unwrap();
+                        println!("after\n{}", reduced);
+                        if reduced.results.len() == 2 {
+                            return match reduced.results.as_slice() {
+                                [false, false] => Proposition::Contradiction,
+                                [false, true] => Proposition::Contingency(true),
+                                [true, false] => Proposition::Contingency(false),
+                                [true, true] => Proposition::Tautology,
+                                _ => unreachable!()
+                            };
+                        }
+                    }
+                }
             }
         }
+        Proposition::Contingency(false)
     }
+
+    pub fn solve(&mut self) {
+        for query in self.queries.iter() {
+            self.solve_query(*query);
+        }
+    }
+
+    // pub fn is_fact(&self, var: &char) -> bool {
+    //     self.facts.contains(var)
+    // }
 }
 
 impl TryFrom<Input> for Executor {
@@ -144,7 +208,7 @@ impl TryFrom<Input> for Executor {
         Ok(Executor {
             rulemap,
             facts: input.facts.chars().collect(),
-            queries: input.queries.chars().collect(),
+            queries: input.queries.chars().collect()
         })
     }
 }
@@ -160,16 +224,57 @@ mod executor {
     fn executor() -> Result<()> {
         let input = Input {
             rules: vec![
-                "A + Z => B".to_string(),
-                "B => C".to_string(),
-                "C <=> D + E".to_string(),
-                "E | F => G".to_string(),
-                "G => H".to_string(),
+                "A + Z => B".into(),
+                "B => C".into(),
+                "C <=> D + E".into(),
+                "E | F => G".into(),
+                "G => H".into(),
             ],
-            facts: "AZ".to_string(),
-            queries: "G".to_string(),
+            facts: "AZ".into(),
+            queries: "G".into(),
         };
         let mut executor = Executor::try_from(input)?;
+        // println!("executor: {:#?}", executor);
+        executor.solve();
+
+        Ok(())
+    }
+
+    #[test]
+    fn executor2() -> Result<()> {
+        let input = Input {
+            rules: vec![
+                "P => Q".into(),
+                "L + M => P".into(),
+                "B + L => M".into(),
+                "A + P => L".into(),
+                "A + B => L".into(),
+            ],
+            facts: "AB".into(),
+            queries: "Q".into(),
+        };
+        let mut executor = Executor::try_from(input)?;
+        // println!("executor: {:#?}", executor);
+        executor.solve();
+
+        Ok(())
+    }
+
+    #[test]
+    fn executor3() -> Result<()> {
+        let input = Input {
+            rules: vec![
+                "A => B".into(),
+                "B => C".into(),
+                "D => E".into(),
+                "E + F => G".into(),
+                "C + G => H".into(),
+            ],
+            facts: "ADF".into(),
+            queries: "H".into(),
+        };
+        let mut executor = Executor::try_from(input)?;
+        // println!("executor: {:#?}", executor);
         executor.solve();
 
         Ok(())

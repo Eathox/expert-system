@@ -186,7 +186,7 @@ impl Iterator for PermutationIter {
 // `0 => 1` implies index 0b01, results[1]
 // `1 => 0` implies index 0b10, results[2]
 // `1 => 1` implies index 0b11, results[3]
-#[derive(Default, Eq, PartialEq, Hash, Clone)]
+#[derive(Debug, Default, Eq, PartialEq, Hash, Clone)]
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
@@ -264,7 +264,7 @@ impl fmt::Display for TruthTable {
 }
 
 // Structure that maps for all identifiers the related truth tables.
-#[derive(Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct RuleMap {
     map: HashMap<char, HashSet<Rc<TruthTable>>>,
 }
@@ -298,7 +298,7 @@ impl RuleMap {
         Ok(())
     }
 
-    pub fn get_span_ref(&mut self, key: char) -> Option<&Span> {
+    pub fn get_span_ref(&self, key: char) -> Option<&Span> {
         self.map.get(&key)
     }
 }
