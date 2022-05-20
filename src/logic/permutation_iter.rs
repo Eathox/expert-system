@@ -1,6 +1,6 @@
 use super::is_identifier;
 
-use std::{borrow::Borrow, collections::HashSet};
+use std::{borrow::Borrow, collections::HashMap};
 
 // PermutationIter is an iterator that iterates over all permutations of a rule input string
 // The order in which the permutations are generated is always following the same pattern, example:
@@ -10,9 +10,10 @@ use std::{borrow::Borrow, collections::HashSet};
 // `1 => 0`
 // `1 => 1`
 pub struct PermutationIter {
-    formula: String,
     pub variables: Vec<char>,
-    size: usize,
+    formula: String,
+    pos_map: HashMap<char, Vec<usize>>,
+    permutation: usize,
 }
 
 impl<T> From<T> for PermutationIter
@@ -21,16 +22,19 @@ where
 {
     fn from(formula: T) -> PermutationIter {
         let formula = formula.borrow().to_owned();
-        let mut set = HashSet::new();
-        let mut variables = formula
-            .chars()
-            .filter(|c| is_identifier(c) && set.insert(c.to_owned()))
-            .collect::<Vec<char>>();
+        let mut pos_map = HashMap::new();
+        for (i, c) in formula.chars().enumerate() {
+            if is_identifier(c) {
+                pos_map.entry(c).or_insert_with(Vec::new).push(i);
+            }
+        }
+        let mut variables: Vec<char> = pos_map.keys().cloned().collect();
         variables.sort_unstable();
         PermutationIter {
-            formula,
             variables,
-            size: 0,
+            formula,
+            pos_map,
+            permutation: 0,
         }
     }
 }
@@ -39,21 +43,22 @@ impl Iterator for PermutationIter {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.size == 1 << self.variables.len() {
+        if self.permutation == 1 << self.variables.len() {
             None
         } else {
             let mut permutation = self.formula.clone();
             for (i, c) in self.variables.iter().enumerate() {
-                permutation = permutation.replace(
-                    &c.to_string(),
-                    if self.size & (1 << (self.variables.len() - 1 - i)) == 0 {
-                        "0"
-                    } else {
-                        "1"
-                    },
-                );
+                for &pos in self.pos_map[c].iter() {
+                    permutation.replace_range(pos..(pos + 1), {
+                        if self.permutation & (1 << (self.variables.len() - 1 - i)) == 0 {
+                            "0"
+                        } else {
+                            "1"
+                        }
+                    })
+                }
             }
-            self.size += 1;
+            self.permutation += 1;
             Some(permutation)
         }
     }
