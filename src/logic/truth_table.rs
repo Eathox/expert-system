@@ -22,12 +22,11 @@ impl TryFrom<PermutationIter> for TruthTable {
 
     fn try_from(mut permutation_iter: PermutationIter) -> Result<Self> {
         let mut table = Self::default();
-        for permutation in permutation_iter.by_ref() {
-            table.results.push(
-                evaluate_rule(&permutation)
-                    .context(format!("Failed to evaluate permutation {}", permutation))?,
-            );
-        }
+        let results: Result<Vec<bool>> = permutation_iter
+            .by_ref()
+            .map(|permutation| evaluate_rule(&permutation))
+            .collect();
+        table.results = results.context("Failed to evaluate permutations")?;
         table.variables = permutation_iter.variables;
         Ok(table)
     }
@@ -84,7 +83,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "Failed to evaluate permutation 0 = 0"
+            "Failed to evaluate permutations"
         );
     }
 }
