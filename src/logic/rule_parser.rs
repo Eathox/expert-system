@@ -37,7 +37,7 @@ where
 
 pub fn tokenize_rule(input: &str) -> Result<Vec<Token>> {
     let mut lexer = input.chars();
-    let mut token_list: Vec<Token> = Vec::new();
+    let mut token_list: Vec<Token> = Vec::with_capacity(input.len());
     while let Some(c) = lexer.next() {
         match c {
             '(' | ')' => token_list.push(Parenthesis(c)),
