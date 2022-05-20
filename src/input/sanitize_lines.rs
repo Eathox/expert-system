@@ -15,10 +15,10 @@ pub fn sanitize_lines(lines: &[impl Borrow<str>]) -> Vec<String> {
         let mut sanitized = line.borrow().to_string();
         sanitized = remove_comment(sanitized);
         sanitized = remove_spaces(sanitized);
-        if !result.is_empty() && prev.is_empty() && !sanitized.is_empty() {
-            result.push(String::new());
-        }
         if !sanitized.is_empty() {
+            if !result.is_empty() && prev.is_empty() {
+                result.push(String::new());
+            }
             result.push(sanitized.clone());
         }
         prev = sanitized

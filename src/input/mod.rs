@@ -1,6 +1,9 @@
+mod sanitize_lines;
+
+pub use sanitize_lines::*;
+
 use crate::logic::is_identifier;
-use crate::sanitize_lines::*;
-use crate::utils::*;
+use crate::utils::read_file;
 
 use anyhow::{anyhow, Context, Result};
 use std::{borrow::Borrow, fmt, path::PathBuf};
