@@ -1,11 +1,5 @@
-mod input;
-mod logic;
-mod sanitize_lines;
-mod usage;
-mod utils;
-
-use input::Input;
-use logic::RuleMap;
+extern crate expert_system;
+use expert_system::*;
 
 use anyhow::{Context, Result};
 use std::{env, path::PathBuf};
@@ -15,7 +9,7 @@ fn handle_cli() -> String {
     match args.len() {
         2 => args[1].clone(),
         _ => {
-            eprint!("{}", usage::USAGE);
+            eprint!("{}", USAGE);
             std::process::exit(1);
         }
     }
