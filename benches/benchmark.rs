@@ -46,11 +46,6 @@ use std::fs::File;
 
 fn main() {
     use std::time::Instant;
-    let guard = pprof::ProfilerGuardBuilder::default()
-        .frequency(1000)
-        .blocklist(&["libc", "libgcc", "pthread", "vdso", "__sigtramp"])
-        .build()
-        .unwrap();
     let now = Instant::now();
 
     // let res = TruthTable::try_from("A + B + C + D + E + F + G + H + I + J + K + L + M + N + O + P + Q + R + S + T + U + V + W + X + Y => Z");
@@ -59,15 +54,6 @@ fn main() {
     );
 
     let elapsed = now.elapsed();
-    if let Ok(report) = guard.report().build() {
-        let file = File::create("flamegraph.svg").unwrap();
-        report.flamegraph(file).unwrap();
-    };
     println!("Ok? {:?}", res.is_ok());
-
-    println!("Elapsed");
-    println!(" Seconds: {}", elapsed.as_secs_f64());
-    println!(" Millis:  {}", elapsed.as_millis());
-    println!(" Micros:  {}", elapsed.as_micros());
-    println!(" Nanos:   {}", elapsed.as_nanos());
+    println!("Elapsed: {}", elapsed.as_secs_f64());
 }
