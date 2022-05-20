@@ -28,7 +28,7 @@ impl TryFrom<PermutationIter> for TruthTable {
                     .context(format!("Failed to evaluate permutation {}", permutation))?,
             );
         }
-        table.variables.append(&mut permutation_iter.variables);
+        table.variables = permutation_iter.variables;
         Ok(table)
     }
 }
