@@ -15,5 +15,11 @@ indoc = "1.x"
 anyhow = "1.x"
 
 [dev-dependencies]
+bencher = "0.x"
 assert_cmd = "2.x"
 pretty_assertions = "1.x"
+pprof = { version = "0.9", features = ["flamegraph"] }
+
+[[bench]]
+name = "benchmark"
+harness = false
