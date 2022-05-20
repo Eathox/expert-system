@@ -120,6 +120,18 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
+    fn whitespace() -> Result<()> {
+        assert_eq!(evaluate_rule("1 \t\n\r=> 0")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn no_whitespace() -> Result<()> {
+        assert_eq!(evaluate_rule("1=>0")?, false);
+        Ok(())
+    }
+
+    #[test]
     fn uni_directional() -> Result<()> {
         assert_eq!(evaluate_rule("1 => 0")?, false);
         assert_eq!(evaluate_rule("0 => 1")?, true);
