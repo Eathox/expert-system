@@ -106,14 +106,71 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn empty() -> Result<()> {
+    fn empty() {
         let result = RuleMap::default();
         assert!(result.map.is_empty());
-        Ok(())
     }
 
     #[test]
-    fn from() -> Result<()> {
+    fn from() {
+        let result = RuleMap::from(vec![
+            TruthTable {
+                variables: vec!['A', 'B'],
+                results: vec![],
+            },
+            TruthTable {
+                variables: vec!['B', 'C'],
+                results: vec![],
+            },
+        ]);
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
+    }
+
+    #[test]
+    fn insert() {
+        let mut result = RuleMap::default();
+        result.insert(TruthTable {
+            variables: vec!['A', 'B'],
+            results: vec![],
+        });
+        assert_eq!(result.map.len(), 2);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 1);
+
+        result.insert(TruthTable {
+            variables: vec!['B', 'C'],
+            results: vec![],
+        });
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
+    }
+
+    #[test]
+    fn insert_vec() {
+        let mut result = RuleMap::default();
+        result.insert_vec(vec![
+            TruthTable {
+                variables: vec!['A', 'B'],
+                results: vec![],
+            },
+            TruthTable {
+                variables: vec!['B', 'C'],
+                results: vec![],
+            },
+        ]);
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
+    }
+
+    #[test]
+    fn from_rule() -> Result<()> {
         let result = RuleMap::try_from(vec!["A => B", "B => C"])?;
         assert_eq!(result.map.len(), 3);
         assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
@@ -123,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    fn insert() -> Result<()> {
+    fn insert_rule() -> Result<()> {
         let mut result = RuleMap::default();
         result.insert_rule("A => B")?;
         assert_eq!(result.map.len(), 2);
@@ -139,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_vec() -> Result<()> {
+    fn insert_rule_vec() -> Result<()> {
         let mut result = RuleMap::default();
         result.insert_rule_vec(vec!["A => B", "B => C"])?;
         assert_eq!(result.map.len(), 3);

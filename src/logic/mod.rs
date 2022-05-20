@@ -23,7 +23,7 @@ mod tests {
     #[test]
     fn all() {
         for c in '\0'..=char::MAX {
-            assert_eq!(is_identifier(&c), ('A'..='Z').contains(&c));
+            assert_eq!(is_identifier(&c), (c >= 'A' && c <= 'Z'));
         }
     }
 }
