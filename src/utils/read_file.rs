@@ -15,15 +15,15 @@ where
     let file = File::open(file).context("Failed to open file")?;
     let file_buf = BufReader::new(file);
 
-    let mut result: Vec<T> = vec![];
-    for line in file_buf.lines() {
-        let line = line.context("Failed to read line")?;
-        result.push(
-            line.parse()
-                .map_err(|_| anyhow!("Failed to parse: '{}'", type_name::<T>()))?,
-        );
-    }
-    Ok(result)
+    file_buf
+        .lines()
+        .map(|read| match read {
+            Ok(line) => Ok(line
+                .parse()
+                .map_err(|_| anyhow!("Failed to parse: '{}'", type_name::<T>()))?),
+            Err(e) => Err(e).context("Failed to read line"),
+        })
+        .collect()
 }
 
 #[cfg(test)]
