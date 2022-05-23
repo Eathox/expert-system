@@ -43,8 +43,7 @@ pub fn tokenize_rule(input: &str) -> Result<Vec<Token>> {
             '(' | ')' => token_list.push(Parenthesis(c)),
             '!' | '+' | '|' | '^' => token_list.push(Operator(c)),
             '=' | '<' => token_list.push(Implicator(get_direction(&mut lexer, c)?)),
-            '0' => token_list.push(Bool(false)),
-            '1' => token_list.push(Bool(true)),
+            '0' | '1' => token_list.push(Bool(c == '1')),
             c if c.is_whitespace() => {}
             _ => return Err(anyhow!("Unexpected character: {}", c)),
         }
@@ -60,10 +59,8 @@ where
     if let Some(implicator) = token_list.next() {
         let consequent = get_operator(token_list)?;
         match implicator {
-            Implicator(direction) => match direction {
-                Direction::UniDirectional => Ok(!antecedent | consequent),
-                Direction::BiDirectional => Ok(antecedent == consequent),
-            },
+            Implicator(Direction::UniDirectional) => Ok(!antecedent | consequent),
+            Implicator(Direction::BiDirectional) => Ok(antecedent == consequent),
             _ => unreachable!(),
         }
     } else {

@@ -11,7 +11,7 @@ use std::fmt;
 // `0 => 1` implies index 0b01, results[1]
 // `1 => 0` implies index 0b10, results[2]
 // `1 => 1` implies index 0b11, results[3]
-#[derive(Default, Eq, PartialEq, Hash, Clone)]
+#[derive(Eq, PartialEq, Hash, Clone)]
 pub struct TruthTable {
     pub variables: Vec<char>,
     pub results: Vec<bool>,
@@ -21,14 +21,14 @@ impl TryFrom<PermutationIter> for TruthTable {
     type Error = anyhow::Error;
 
     fn try_from(mut permutation_iter: PermutationIter) -> Result<Self> {
-        let mut table = Self::default();
         let results: Result<Vec<bool>> = permutation_iter
             .by_ref()
             .map(|permutation| evaluate_rule(&permutation))
             .collect();
-        table.results = results.context("Failed to evaluate permutations")?;
-        table.variables = permutation_iter.variables;
-        Ok(table)
+        Ok(TruthTable {
+            results: results.context("Failed to evaluate permutations")?,
+            variables: permutation_iter.variables,
+        })
     }
 }
 
