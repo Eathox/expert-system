@@ -1,8 +1,5 @@
-#[macro_use]
-extern crate bencher;
 extern crate expert_system;
 
-use bencher::Bencher;
 use expert_system::*;
 use std::fs::File;
 

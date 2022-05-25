@@ -15,7 +15,6 @@ indoc = "1.x"
 anyhow = "1.x"
 
 [dev-dependencies]
-bencher = "0.x"
 assert_cmd = "2.x"
 pretty_assertions = "1.x"
 
