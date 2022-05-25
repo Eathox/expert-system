@@ -26,12 +26,12 @@ where
             ('=', '>') => Ok(Direction::UniDirectional),
             ('<', '=') => match lexer.next() {
                 Some('>') => Ok(Direction::BiDirectional),
-                _ => Err(anyhow!("Unable to finish lexing implicator")),
+                _ => Err(anyhow!("Invalid UniDirectional implicator")),
             },
-            _ => Err(anyhow!("Unable to finish lexing implicator")),
+            _ => Err(anyhow!("Invalid implicator: {}{}", c, next)),
         }
     } else {
-        Err(anyhow!("Unable to finish lexing implicator"))
+        Err(anyhow!("Unexpected end of implicator"))
     }
 }
 
@@ -236,6 +236,16 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "Failed to tokenize input: 'A => Z'"
+        );
+    }
+
+    #[test]
+    fn error_invalid_implicator() {
+        let result = evaluate_rule("0 <= 1");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to tokenize input: '0 <= 1'"
         );
     }
 
