@@ -1,6 +1,30 @@
-use super::is_identifier;
+mod parallel;
+mod sequential;
 
-use std::{borrow::Borrow, collections::HashMap};
+use parallel::*;
+use sequential::*;
+
+use std::borrow::Borrow;
+
+const MAX_SEQUENTIAL_VARIABLES: usize = 18;
+const PARALLEL_BUFF_SIZE: usize = 10000;
+
+enum SmartPermutationIter {
+    Sequential(SequentialPermutationIter),
+    Parallel(ParallelPermutationIter),
+}
+
+impl SmartPermutationIter {
+    fn new(sequential_iter: SequentialPermutationIter) -> SmartPermutationIter {
+        match sequential_iter.variables.len() {
+            0..=MAX_SEQUENTIAL_VARIABLES => SmartPermutationIter::Sequential(sequential_iter),
+            _ => SmartPermutationIter::Parallel(ParallelPermutationIter::new(
+                sequential_iter,
+                PARALLEL_BUFF_SIZE,
+            )),
+        }
+    }
+}
 
 // PermutationIter is an iterator that iterates over all permutations of a rule input string
 // The order in which the permutations are generated is always following the same pattern, example:
@@ -11,9 +35,7 @@ use std::{borrow::Borrow, collections::HashMap};
 // `1 => 1`
 pub struct PermutationIter {
     pub variables: Vec<char>,
-    formula: String,
-    pos_map: HashMap<char, Vec<usize>>,
-    permutation: usize,
+    iter: SmartPermutationIter,
 }
 
 impl<T> From<T> for PermutationIter
@@ -21,20 +43,11 @@ where
     T: Borrow<str>,
 {
     fn from(formula: T) -> PermutationIter {
-        let formula = formula.borrow().to_owned();
-        let mut pos_map = HashMap::new();
-        for (i, c) in formula.chars().enumerate() {
-            if is_identifier(c) {
-                pos_map.entry(c).or_insert_with(Vec::new).push(i);
-            }
-        }
-        let mut variables: Vec<char> = pos_map.keys().cloned().collect();
-        variables.sort_unstable();
+        let sequential_iter = SequentialPermutationIter::new(formula);
+        let variables = sequential_iter.variables.to_owned();
         PermutationIter {
             variables,
-            formula,
-            pos_map,
-            permutation: 0,
+            iter: SmartPermutationIter::new(sequential_iter),
         }
     }
 }
@@ -43,23 +56,9 @@ impl Iterator for PermutationIter {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.permutation == 1 << self.variables.len() {
-            None
-        } else {
-            let mut permutation = self.formula.clone();
-            for (i, c) in self.variables.iter().enumerate() {
-                for &pos in self.pos_map[c].iter() {
-                    permutation.replace_range(pos..(pos + 1), {
-                        if self.permutation & (1 << (self.variables.len() - 1 - i)) == 0 {
-                            "0"
-                        } else {
-                            "1"
-                        }
-                    })
-                }
-            }
-            self.permutation += 1;
-            Some(permutation)
+        match self.iter {
+            SmartPermutationIter::Sequential(ref mut iter) => iter.next(),
+            SmartPermutationIter::Parallel(ref mut iter) => iter.next(),
         }
     }
 }
