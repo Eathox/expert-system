@@ -1,30 +1,15 @@
 use super::SequentialPermutationIter;
 
-use crossbeam::channel::{bounded, Receiver};
+use crossbeam::channel::Sender;
 
-pub struct ParallelPermutationIter {
-    receiver: Receiver<String>,
-}
+pub struct ParallelPermutationIter {}
 
 impl ParallelPermutationIter {
-    pub fn new(
-        sequential_iter: SequentialPermutationIter,
-        buff_size: usize,
-    ) -> ParallelPermutationIter {
-        let (sender, receiver) = bounded(buff_size);
+    pub fn new(sequential_iter: SequentialPermutationIter, sender: Sender<String>) {
         std::thread::spawn(move || {
             for p in sequential_iter {
                 sender.send(p).unwrap();
             }
         });
-        ParallelPermutationIter { receiver }
-    }
-}
-
-impl Iterator for ParallelPermutationIter {
-    type Item = String;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.receiver.recv().ok()
     }
 }

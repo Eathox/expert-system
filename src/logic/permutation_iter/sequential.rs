@@ -1,42 +1,18 @@
-use crate::is_identifier;
-
-use std::{borrow::Borrow, collections::HashMap};
+use std::collections::HashMap;
 
 pub struct SequentialPermutationIter {
     pub variables: Vec<char>,
-    formula: String,
-    pos_map: HashMap<char, Vec<usize>>,
-    permutation: usize,
-}
-
-impl SequentialPermutationIter {
-    pub fn new<T>(formula: T) -> SequentialPermutationIter
-    where
-        T: Borrow<str>,
-    {
-        let formula = formula.borrow().to_owned();
-        let mut pos_map = HashMap::new();
-        for (i, c) in formula.chars().enumerate() {
-            if is_identifier(c) {
-                pos_map.entry(c).or_insert_with(Vec::new).push(i);
-            }
-        }
-        let mut variables: Vec<char> = pos_map.keys().cloned().collect();
-        variables.sort_unstable();
-        SequentialPermutationIter {
-            variables,
-            formula,
-            pos_map,
-            permutation: 0,
-        }
-    }
+    pub formula: String,
+    pub pos_map: HashMap<char, Vec<usize>>,
+    pub permutation: usize,
+    pub end: usize,
 }
 
 impl Iterator for SequentialPermutationIter {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.permutation == 1 << self.variables.len() {
+        if self.permutation == self.end {
             None
         } else {
             let mut permutation = self.formula.clone();
