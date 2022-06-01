@@ -15,11 +15,11 @@ pub struct PermutationIter {
     size: usize,
 }
 
-impl<T> From<T> for PermutationIter
-where
-    T: Borrow<str>,
-{
-    fn from(formula: T) -> PermutationIter {
+impl PermutationIter {
+    pub fn new<T>(formula: T) -> PermutationIter
+    where
+        T: Borrow<str>,
+    {
         let formula = formula.borrow().to_owned();
         let mut set = HashSet::new();
         let mut variables = formula
@@ -67,14 +67,14 @@ mod tests {
 
     #[test]
     fn empty() {
-        let mut iter = PermutationIter::from("");
+        let mut iter = PermutationIter::new("");
         assert_eq!(Some("".to_string()), iter.next());
         assert_eq!(None, iter.next());
     }
 
     #[test]
     fn identifiers() {
-        let mut iter = PermutationIter::from("! 1 0 , . a z A Z");
+        let mut iter = PermutationIter::new("! 1 0 , . a z A Z");
         assert_eq!(Some("! 1 0 , . a z 0 0".to_string()), iter.next());
         assert_eq!(Some("! 1 0 , . a z 0 1".to_string()), iter.next());
         assert_eq!(Some("! 1 0 , . a z 1 0".to_string()), iter.next());
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn order() {
-        let mut iter = PermutationIter::from("A B C");
+        let mut iter = PermutationIter::new("A B C");
         assert_eq!(Some("0 0 0".to_string()), iter.next());
         assert_eq!(Some("0 0 1".to_string()), iter.next());
         assert_eq!(Some("0 1 0".to_string()), iter.next());
@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn duplicate_identifiers() {
-        let mut iter = PermutationIter::from("A A B B");
+        let mut iter = PermutationIter::new("A A B B");
         assert_eq!(Some("0 0 0 0".to_string()), iter.next());
         assert_eq!(Some("0 0 1 1".to_string()), iter.next());
         assert_eq!(Some("1 1 0 0".to_string()), iter.next());
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn with_rule_symbols() {
-        let mut iter = PermutationIter::from("A + B <=> C");
+        let mut iter = PermutationIter::new("A + B <=> C");
         assert_eq!(Some("0 + 0 <=> 0".to_string()), iter.next());
         assert_eq!(Some("0 + 0 <=> 1".to_string()), iter.next());
         assert_eq!(Some("0 + 1 <=> 0".to_string()), iter.next());
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn respect_white_space() {
-        let mut iter = PermutationIter::from("\t\n\r A");
+        let mut iter = PermutationIter::new("\t\n\r A");
         assert_eq!(Some("\t\n\r 0".to_string()), iter.next());
         assert_eq!(Some("\t\n\r 1".to_string()), iter.next());
         assert_eq!(None, iter.next());

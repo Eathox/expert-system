@@ -37,7 +37,7 @@ impl TryFrom<&str> for TruthTable {
     type Error = anyhow::Error;
 
     fn try_from(str: &str) -> Result<Self> {
-        PermutationIter::from(str).try_into()
+        PermutationIter::new(str).try_into()
     }
 }
 
