@@ -6,16 +6,9 @@ mod sequential;
 use parallel::*;
 use sequential::*;
 
-use crossbeam::channel::{bounded, Receiver};
 use std::{borrow::Borrow, collections::HashMap};
 
-enum PermutationIterType {
-    Sequential(SequentialPermutationIter),
-    Parallel(Receiver<String>),
-}
-
 const MAX_SEQUENTIAL_VARIABLES: usize = 15;
-const PARALLEL_THREAD_BUFF_SIZE: usize = 4000;
 
 // PermutationIter is an iterator that iterates over all permutations of a rule input string
 // The order in which the permutations are generated is always following the same pattern, example:
@@ -24,9 +17,9 @@ const PARALLEL_THREAD_BUFF_SIZE: usize = 4000;
 // `0 => 1`
 // `1 => 0`
 // `1 => 1`
-pub struct PermutationIter {
-    pub variables: Vec<char>,
-    iter: PermutationIterType,
+pub enum PermutationIter {
+    Sequential(SequentialPermutationIter),
+    Parallel(ParallelPermutationIter),
 }
 
 fn calc_thread_count(variable_count: usize) -> usize {
@@ -54,77 +47,27 @@ impl PermutationIter {
         variables.sort_unstable();
 
         let thread_count = calc_thread_count(variables.len());
-        PermutationIter {
-            variables: variables.clone(),
-            iter: match thread_count {
-                0 => PermutationIter::new_sequential(formula, variables, pos_map),
-                _ => PermutationIter::new_parallel(formula, variables, pos_map, thread_count),
-            },
-        }
-    }
-
-    fn new_sequential(
-        formula: String,
-        variables: Vec<char>,
-        pos_map: HashMap<char, Vec<usize>>,
-    ) -> PermutationIterType {
-        let end = 1 << variables.len();
-        let iter = SequentialPermutationIter {
-            variables,
-            formula,
-            pos_map,
-            permutation: 0,
-            end,
-        };
-        PermutationIterType::Sequential(iter)
-    }
-
-    fn new_parallel(
-        formula: String,
-        variables: Vec<char>,
-        pos_map: HashMap<char, Vec<usize>>,
-        thread_count: usize,
-    ) -> PermutationIterType {
-        let total_end = 1 << variables.len();
-        let mut chunked_iters = Vec::with_capacity(thread_count);
         match thread_count {
-            0 => unreachable!(),
-            1 => {
-                chunked_iters.push(SequentialPermutationIter {
-                    variables,
-                    formula,
-                    pos_map,
-                    permutation: 0,
-                    end: total_end,
-                });
+            0 => {
+                let end = 1 << variables.len();
+                PermutationIter::Sequential(SequentialPermutationIter::new(
+                    formula, variables, pos_map, 0, end,
+                ))
             }
-            _ => {
-                let step = total_end / thread_count;
-                let mut start;
-                let mut end;
-                for i in 0..(thread_count) {
-                    start = step * i;
-                    end = start + step;
-                    if i == (thread_count - 1) {
-                        end = total_end;
-                    }
-
-                    chunked_iters.push(SequentialPermutationIter {
-                        variables: variables.clone(),
-                        formula: formula.clone(),
-                        pos_map: pos_map.clone(),
-                        permutation: start,
-                        end,
-                    });
-                }
-            }
+            _ => PermutationIter::Parallel(ParallelPermutationIter::new(
+                formula,
+                variables,
+                pos_map,
+                thread_count,
+            )),
         }
+    }
 
-        let (sender, receiver) = bounded(PARALLEL_THREAD_BUFF_SIZE * thread_count);
-        for iter in chunked_iters {
-            ParallelPermutationIter::new(iter, sender.clone());
+    pub fn variables(&self) -> &Vec<char> {
+        match self {
+            PermutationIter::Sequential(iter) => &iter.variables,
+            PermutationIter::Parallel(iter) => &iter.variables,
         }
-        PermutationIterType::Parallel(receiver)
     }
 }
 
@@ -132,9 +75,9 @@ impl Iterator for PermutationIter {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter {
-            PermutationIterType::Sequential(ref mut iter) => iter.next(),
-            PermutationIterType::Parallel(ref receiver) => receiver.recv().ok(),
+        match self {
+            PermutationIter::Sequential(ref mut iter) => iter.next(),
+            PermutationIter::Parallel(ref mut iter) => iter.next(),
         }
     }
 }

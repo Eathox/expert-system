@@ -27,7 +27,7 @@ impl TryFrom<PermutationIter> for TruthTable {
             .collect();
         Ok(TruthTable {
             results: results.map_err(|e| e.context("Failed to evaluate permutations"))?,
-            variables: permutation_iter.variables,
+            variables: permutation_iter.variables().to_owned(),
         })
     }
 }

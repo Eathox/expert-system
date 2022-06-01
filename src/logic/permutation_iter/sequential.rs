@@ -2,10 +2,28 @@ use std::collections::HashMap;
 
 pub struct SequentialPermutationIter {
     pub variables: Vec<char>,
-    pub formula: String,
-    pub pos_map: HashMap<char, Vec<usize>>,
-    pub permutation: usize,
-    pub end: usize,
+    formula: String,
+    pos_map: HashMap<char, Vec<usize>>,
+    permutation: usize,
+    end: usize,
+}
+
+impl SequentialPermutationIter {
+    pub fn new(
+        formula: String,
+        variables: Vec<char>,
+        pos_map: HashMap<char, Vec<usize>>,
+        start: usize,
+        end: usize,
+    ) -> SequentialPermutationIter {
+        SequentialPermutationIter {
+            variables,
+            formula,
+            pos_map,
+            permutation: start,
+            end,
+        }
+    }
 }
 
 impl Iterator for SequentialPermutationIter {
