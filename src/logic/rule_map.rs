@@ -1,6 +1,6 @@
 use super::TruthTable;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::{
     borrow::Borrow,
     collections::{HashMap, HashSet},
@@ -33,10 +33,12 @@ impl RuleMap {
     where
         T: Borrow<str>,
     {
-        let table = TruthTable::try_from(rule.borrow()).context(format!(
-            "Failed to create truth table from: '{}'",
-            rule.borrow()
-        ))?;
+        let table = TruthTable::try_from(rule.borrow()).map_err(|e| {
+            e.context(format!(
+                "Failed to create truth table from: '{}'",
+                rule.borrow()
+            ))
+        })?;
         self.insert(table);
         Ok(())
     }

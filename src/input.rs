@@ -2,7 +2,7 @@ use crate::logic::is_identifier;
 use crate::sanitize_lines::*;
 use crate::utils::*;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use std::{borrow::Borrow, fmt, path::PathBuf};
 
 #[derive(PartialEq)]
@@ -29,7 +29,7 @@ impl TryFrom<PathBuf> for Input {
 
     fn try_from(file_path: PathBuf) -> Result<Self, Self::Error> {
         let content: Vec<String> = read_file(&file_path)
-            .context(format!("Failed to read input file: '{:?}'", file_path))?;
+            .map_err(|e| e.context(format!("Failed to read input file: '{:?}'", file_path)))?;
         content.try_into()
     }
 }
@@ -64,11 +64,11 @@ where
             }
         }
 
-        let facts = facts.context("No facts in input file")?;
+        let facts = facts.ok_or(anyhow!("No facts in input file"))?;
         if let Some(c) = facts.chars().find(|c| !is_identifier(c)) {
             return Err(anyhow!("Invalid identifier in facts: '{}'", c));
         }
-        let queries = queries.context("No queries in input file")?;
+        let queries = queries.ok_or(anyhow!("No queries in input file"))?;
         if let Some(c) = queries.chars().find(|c| !is_identifier(c)) {
             return Err(anyhow!("Invalid identifier in query: '{}'", c));
         }

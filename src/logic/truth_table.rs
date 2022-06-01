@@ -1,6 +1,6 @@
 use super::{evaluate_rule, PermutationIter};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::fmt;
 
 // TruthTable struct holds the truth table data of an input rule.
@@ -26,7 +26,7 @@ impl TryFrom<PermutationIter> for TruthTable {
             .map(|permutation| evaluate_rule(&permutation))
             .collect();
         Ok(TruthTable {
-            results: results.context("Failed to evaluate permutations")?,
+            results: results.map_err(|e| e.context("Failed to evaluate permutations"))?,
             variables: permutation_iter.variables,
         })
     }

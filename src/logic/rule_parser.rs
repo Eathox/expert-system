@@ -1,6 +1,6 @@
 use Token::*;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use std::iter::Peekable;
 
 #[derive(Debug, Copy, Clone)]
@@ -104,8 +104,8 @@ where
 }
 
 pub fn evaluate_rule(input: &str) -> Result<bool> {
-    let token_list =
-        tokenize_rule(input).context(format!("Failed to tokenize input: '{}'", input))?;
+    let token_list = tokenize_rule(input)
+        .map_err(|e| e.context(format!("Failed to tokenize input: '{}'", input)))?;
     get_rule(&mut token_list.iter().peekable())
 }
 
