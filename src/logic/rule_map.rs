@@ -18,7 +18,7 @@ impl RuleMap {
     pub fn insert(&mut self, table: TruthTable) {
         let ptr = Rc::new(table);
         for v in ptr.variables.iter() {
-            let tables = self.map.entry(*v).or_insert_with(|| HashSet::new());
+            let tables = self.map.entry(*v).or_insert_with(HashSet::new);
             tables.insert(Rc::clone(&ptr));
         }
     }

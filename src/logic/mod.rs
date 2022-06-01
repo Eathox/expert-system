@@ -13,17 +13,3 @@ use std::{borrow::Borrow, char};
 pub fn is_identifier(c: impl Borrow<char>) -> bool {
     ('A'..='Z').contains(c.borrow())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn all() {
-        for c in '\0'..=char::MAX {
-            assert_eq!(is_identifier(&c), (c >= 'A' && c <= 'Z'));
-        }
-    }
-}
