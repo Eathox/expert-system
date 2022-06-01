@@ -14,8 +14,8 @@ enum PermutationIterType {
     Parallel(Receiver<String>),
 }
 
-const MAX_SEQUENTIAL_VARIABLES: usize = 16;
-const PARALLEL_BUFF_SIZE: usize = 10000;
+const MAX_SEQUENTIAL_VARIABLES: usize = 15;
+const PARALLEL_THREAD_BUFF_SIZE: usize = 4000;
 
 // PermutationIter is an iterator that iterates over all permutations of a rule input string
 // The order in which the permutations are generated is always following the same pattern, example:
@@ -120,7 +120,7 @@ impl PermutationIter {
             }
         }
 
-        let (sender, receiver) = bounded(PARALLEL_BUFF_SIZE);
+        let (sender, receiver) = bounded(PARALLEL_THREAD_BUFF_SIZE * thread_count);
         for iter in chunked_iters {
             ParallelPermutationIter::new(iter, sender.clone());
         }
