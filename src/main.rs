@@ -1,8 +1,7 @@
 extern crate expert_system;
 use expert_system::*;
 use input::Input;
-use parser::TruthTable;
-use permutation_iter::PermutationIter;
+use parser::RuleMap;
 
 use anyhow::{Context, Result};
 use std::{env, path::PathBuf};
@@ -20,14 +19,11 @@ fn handle_cli() -> String {
 
 fn main() -> Result<()> {
     let input_file = handle_cli();
-    let input = Input::try_from(PathBuf::from(input_file))?;
+    let input = Input::try_from(PathBuf::from(input_file)).context("Unable to read input file")?;
 
     println!("{:?}", input);
-    for rule in input.rules {
-        let table = TruthTable::try_from(PermutationIter::new(&rule))
-            .context(format!("Failed to parse rule {}", rule))?;
-        println!("{}\n{:?}", rule, table);
-    }
+    let map = RuleMap::try_from(input.rules).context("Failed to parse rule")?;
+    println!("{:?}", map);
 
     Ok(())
 }

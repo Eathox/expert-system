@@ -2,6 +2,7 @@ use crate::*;
 use permutation_iter::PermutationIter;
 
 use anyhow::{anyhow, Context, Result};
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::iter::Peekable;
@@ -30,7 +31,7 @@ impl<'a> RuleParser {
         RuleParser {}
     }
 
-    fn get_direction<I>(&mut self, lexer: &mut Peekable<I>, c: char) -> Result<Direction>
+    fn get_direction<I>(&mut self, lexer: &mut I, c: char) -> Result<Direction>
     where
         I: Iterator<Item = char>,
     {
@@ -39,89 +40,91 @@ impl<'a> RuleParser {
                 ('=', '>') => Ok(Direction::UniDirectional),
                 ('<', '=') => match lexer.next() {
                     Some('>') => Ok(Direction::BiDirectional),
-                    _ => Err(anyhow!("Unable to finish lexing inplicator")),
+                    _ => Err(anyhow!("Unable to finish lexing implicator")),
                 },
-                _ => Err(anyhow!("Unable to finish lexing inplicator")),
+                _ => Err(anyhow!("Unable to finish lexing implicator")),
             }
         } else {
-            Err(anyhow!("Unable to finish lexing inplicator"))
+            Err(anyhow!("Unable to finish lexing implicator"))
         }
     }
 
     pub fn tokenize(&mut self, input: &str) -> Result<Vec<Token>> {
-        let mut lexer = input.chars().peekable();
-        let mut tokenlist: Vec<Token> = Vec::new();
+        let mut lexer = input.chars();
+        let mut token_list: Vec<Token> = Vec::new();
         while let Some(c) = lexer.next() {
             match c {
-                '(' | ')' => tokenlist.push(Parenthesis(c)),
-                '!' | '+' | '|' | '^' => tokenlist.push(Operator(c)),
-                '=' | '<' => tokenlist.push(Implicator(self.get_direction(&mut lexer, c)?)),
-                '0' => tokenlist.push(Bool(false)),
-                '1' => tokenlist.push(Bool(true)),
+                '(' | ')' => token_list.push(Parenthesis(c)),
+                '!' | '+' | '|' | '^' => token_list.push(Operator(c)),
+                '=' | '<' => token_list.push(Implicator(self.get_direction(&mut lexer, c)?)),
+                '0' => token_list.push(Bool(false)),
+                '1' => token_list.push(Bool(true)),
                 c if c.is_whitespace() => {}
                 _ => return Err(anyhow!("Unexpected character: {}", c)),
             }
         }
-        Ok(tokenlist)
+        Ok(token_list)
     }
 
-    fn get_rule<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
+    fn get_rule<I>(&mut self, token_list: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
-        let antecedent = self.get_operator(tokenlist)?;
-        if let Some(implicator) = tokenlist.next() {
-            let consequent = self.get_operator(tokenlist)?;
+        let antecedent = self.get_operator(token_list)?;
+        if let Some(implicator) = token_list.next() {
+            let consequent = self.get_operator(token_list)?;
             match implicator {
                 Implicator(direction) => match direction {
                     Direction::UniDirectional => Ok(!antecedent | consequent),
                     Direction::BiDirectional => Ok(antecedent == consequent),
                 },
-                _ => Err(anyhow!("No implicator found")),
+                _ => unreachable!(),
             }
         } else {
-            Err(anyhow!("Unexpected end of token list"))
+            Err(anyhow!("No implicator found"))
         }
     }
 
-    fn get_operator<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
+    fn get_operator<I>(&mut self, token_list: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
-        let mut node = self.get_factor(tokenlist);
-        while let Some(Operator(op)) = tokenlist.peek() {
-            node = match tokenlist.next() {
-                Some(Operator('+')) => Ok(node? & self.get_factor(tokenlist)?),
-                Some(Operator('|')) => Ok(node? | self.get_factor(tokenlist)?),
-                Some(Operator('^')) => Ok(node? ^ self.get_factor(tokenlist)?),
-                _ => Err(anyhow!("Found unexpected operator: {:?}", op)),
+        let mut node = self.get_factor(token_list);
+        while let Some(Operator(_)) = token_list.peek() {
+            node = match token_list.next() {
+                Some(Operator('+')) => Ok(node? & self.get_factor(token_list)?),
+                Some(Operator('|')) => Ok(node? | self.get_factor(token_list)?),
+                Some(Operator('^')) => Ok(node? ^ self.get_factor(token_list)?),
+                _ => unreachable!(),
             }
         }
         node
     }
 
-    fn get_factor<I>(&mut self, tokenlist: &mut Peekable<I>) -> Result<bool>
+    fn get_factor<I>(&mut self, token_list: &mut Peekable<I>) -> Result<bool>
     where
         I: Iterator<Item = &'a Token>,
     {
-        match tokenlist.next() {
+        match token_list.next() {
             Some(Parenthesis('(')) => {
-                let res = self.get_operator(tokenlist);
-                match tokenlist.next() {
+                let res = self.get_operator(token_list);
+                match token_list.next() {
                     Some(Parenthesis(')')) => res,
                     _ => Err(anyhow!("Missing closing parenthesis")),
                 }
             }
-            Some(Operator('!')) => Ok(!self.get_factor(tokenlist)?),
+            Some(Operator('!')) => Ok(!self.get_factor(token_list)?),
             Some(Bool(b)) => Ok(*b),
-            _ => Err(anyhow!("Unexpected end of token list")),
+            Some(t) => Err(anyhow!("Invalid factor token '{:?}'", t)),
+            None => Err(anyhow!("Unexpected end of token list")),
         }
     }
 
     pub fn evaluate(&mut self, input: &str) -> Result<bool> {
-        let tokenlist = self.tokenize(input).context("Could not tokenize input")?;
-        self.get_rule(&mut tokenlist.iter().peekable())
-            .context("Syntactical error")
+        let token_list = self
+            .tokenize(input)
+            .context(format!("Failed to tokenize input: '{}'", input))?;
+        self.get_rule(&mut token_list.iter().peekable())
     }
 }
 
@@ -148,7 +151,7 @@ impl TruthTable {
     }
 }
 
-impl TryFrom<PermutationIter<'_>> for TruthTable {
+impl TryFrom<PermutationIter> for TruthTable {
     type Error = anyhow::Error;
 
     fn try_from(mut permutation_iter: PermutationIter) -> Result<Self, Self::Error> {
@@ -184,19 +187,28 @@ impl fmt::Debug for TruthTable {
             }
             writeln!(f, "| {} |", if *result { 1 } else { 0 })?;
         }
-        write!(f, "")
+        Ok(())
     }
 }
 
-// Structure that maps for all identifiers the related truth tables.
-struct RuleMap {
+// Structure that holds key pairs of identifier and all related truth tables.
+#[derive(Default)]
+pub struct RuleMap {
     map: HashMap<char, HashSet<Rc<TruthTable>>>,
 }
 
 impl RuleMap {
-    // To insert a new rule in the rulemap Ad-Hoc
-    pub fn insert(&mut self, rule: TruthTable) {
-        let ptr = Rc::new(rule);
+    // Inserts a new rule in the rulemap Ad-Hoc
+    pub fn insert<T>(&mut self, rule: T) -> Result<()>
+    where
+        T: Borrow<str>,
+    {
+        let ptr = Rc::new(
+            TruthTable::try_from(PermutationIter::new(rule.borrow())).context(format!(
+                "Failed to create truth table from: '{}'",
+                rule.borrow()
+            ))?,
+        );
         for v in ptr.variables.iter() {
             let tables = self
                 .map
@@ -204,45 +216,208 @@ impl RuleMap {
                 .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
             tables.insert(Rc::clone(&ptr));
         }
+        Ok(())
     }
-}
 
-// TODO: In the future this should be changed to TryFrom<Vec<&str>> where Vec<&str> is the raw unsanitized list of input rules.
-impl TryFrom<Vec<TruthTable>> for RuleMap {
-    type Error = anyhow::Error;
-
-    fn try_from(ruleset: Vec<TruthTable>) -> Result<Self> {
-        let mut map = HashMap::new();
-        for rule in ruleset.into_iter() {
-            let ptr = Rc::new(rule);
-            for v in ptr.variables.iter() {
-                let tables = map
-                    .entry(*v)
-                    .or_insert_with(|| HashSet::from([Rc::clone(&ptr)]));
-                tables.insert(Rc::clone(&ptr));
-            }
+    pub fn insert_vec<T>(&mut self, rules: Vec<T>) -> Result<()>
+    where
+        T: Borrow<str>,
+    {
+        for rule in rules.iter() {
+            self.insert(rule.borrow())?
         }
-        Ok(RuleMap { map })
+        Ok(())
     }
 }
 
-impl TryFrom<Vec<&str>> for RuleMap {
+impl<T> TryFrom<Vec<T>> for RuleMap
+where
+    T: Borrow<str>,
+{
     type Error = anyhow::Error;
 
-    fn try_from(_ruleset: Vec<&str>) -> Result<Self> {
-        todo!();
+    fn try_from(rules: Vec<T>) -> Result<Self> {
+        let mut map = RuleMap::default();
+        map.insert_vec(rules)?;
+        Ok(map)
     }
 }
 
 impl fmt::Debug for RuleMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (k, v) in self.map.iter() {
+        let mut map = self.map.iter().peekable();
+        while let Some((k, v)) = map.next() {
             writeln!(f, "{}", k)?;
-            for t in v.iter() {
-                writeln!(f, "{:?}", t)?;
+            let mut table = v.iter().peekable();
+            while let Some(t) = table.next() {
+                if map.peek().is_none() && table.peek().is_none() {
+                    write!(f, "{:?}", t)?;
+                } else {
+                    writeln!(f, "{:?}", t)?;
+                }
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests_rule_parser {
+    use super::*;
+
+    use anyhow::Result;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn uni_directional() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 => 0")?, false);
+        assert_eq!(parser.evaluate("0 => 1")?, true);
+        assert_eq!(parser.evaluate("1 => 1")?, true);
+        assert_eq!(parser.evaluate("0 => 0")?, true);
+        Ok(())
+    }
+
+    #[test]
+    fn bi_directional() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 <=> 0")?, false);
+        assert_eq!(parser.evaluate("0 <=> 1")?, false);
+        assert_eq!(parser.evaluate("1 <=> 1")?, true);
+        assert_eq!(parser.evaluate("0 <=> 0")?, true);
+        Ok(())
+    }
+
+    #[test]
+    fn not() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("!1 => 0")?, true);
+        assert_eq!(parser.evaluate("!0 => 0")?, false);
+
+        assert_eq!(parser.evaluate("1 => !1")?, false);
+        assert_eq!(parser.evaluate("1 => !0")?, true);
+        Ok(())
+    }
+
+    #[test]
+    fn and() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 + 1 => 0")?, false);
+        assert_eq!(parser.evaluate("1 + 0 => 0")?, true);
+        assert_eq!(parser.evaluate("0 + 1 => 0")?, true);
+        assert_eq!(parser.evaluate("0 + 0 => 0")?, true);
+
+        assert_eq!(parser.evaluate("1 => 1 + 1")?, true);
+        assert_eq!(parser.evaluate("1 => 0 + 1")?, false);
+        assert_eq!(parser.evaluate("1 => 1 + 0")?, false);
+        assert_eq!(parser.evaluate("1 => 0 + 0")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn or() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 | 1 => 0")?, false);
+        assert_eq!(parser.evaluate("1 | 0 => 0")?, false);
+        assert_eq!(parser.evaluate("0 | 1 => 0")?, false);
+        assert_eq!(parser.evaluate("0 | 0 => 0")?, true);
+
+        assert_eq!(parser.evaluate("1 => 1 | 1")?, true);
+        assert_eq!(parser.evaluate("1 => 1 | 0")?, true);
+        assert_eq!(parser.evaluate("1 => 0 | 1")?, true);
+        assert_eq!(parser.evaluate("1 => 0 | 0")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn xor() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 ^ 1 => 0")?, true);
+        assert_eq!(parser.evaluate("1 ^ 0 => 0")?, false);
+        assert_eq!(parser.evaluate("0 ^ 1 => 0")?, false);
+        assert_eq!(parser.evaluate("0 ^ 0 => 0")?, true);
+
+        assert_eq!(parser.evaluate("1 => 1 ^ 1")?, false);
+        assert_eq!(parser.evaluate("1 => 1 ^ 0")?, true);
+        assert_eq!(parser.evaluate("1 => 0 ^ 1")?, true);
+        assert_eq!(parser.evaluate("1 => 0 ^ 0")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn parenthesis() -> Result<()> {
+        let mut parser = RuleParser::new();
+        assert_eq!(parser.evaluate("1 | 0 + 0 => 0")?, true);
+        assert_eq!(parser.evaluate("(1 | 0) + 0 => 0")?, true);
+        assert_eq!(parser.evaluate("1 | (0 + 0) => 0")?, false);
+        assert_eq!(parser.evaluate("0 + 0 | 1 => 0")?, false);
+        assert_eq!(parser.evaluate("(0 + 0) | 1 => 0")?, false);
+        assert_eq!(parser.evaluate("0 + (0 | 1) => 0")?, true);
+
+        assert_eq!(parser.evaluate("1 => 1 | 0 + 0")?, false);
+        assert_eq!(parser.evaluate("1 => (1 | 0) + 0")?, false);
+        assert_eq!(parser.evaluate("1 => 1 | (0 + 0)")?, true);
+        assert_eq!(parser.evaluate("1 => 0 + 0 | 1")?, true);
+        assert_eq!(parser.evaluate("1 => (0 + 0) | 1")?, true);
+        assert_eq!(parser.evaluate("1 => 0 + (0 | 1)")?, false);
+        Ok(())
+    }
+
+    #[test]
+    fn error_empty() {
+        let result = RuleParser::new().evaluate("");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Unexpected end of token list"
+        );
+    }
+
+    #[test]
+    fn error_invalid_state() {
+        let result = RuleParser::new().evaluate("A => Z");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to tokenize input: 'A => Z'"
+        );
+    }
+
+    #[test]
+    fn error_invalid_operator() {
+        let result = RuleParser::new().evaluate("0 = 1");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to tokenize input: '0 = 1'"
+        );
+    }
+
+    #[test]
+    fn error_missing_operator_half() {
+        let result = RuleParser::new().evaluate("0 | => 0");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Invalid factor token 'Implicator(UniDirectional)'"
+        );
+    }
+
+    #[test]
+    fn error_missing_implicator() {
+        let result = RuleParser::new().evaluate("0");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "No implicator found");
+    }
+
+    #[test]
+    fn error_missing_parenthesis() {
+        let result = RuleParser::new().evaluate("(0 => 0");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Missing closing parenthesis"
+        );
     }
 }
 
@@ -255,46 +430,81 @@ mod tests_truth_table {
 
     #[test]
     fn simple() -> Result<()> {
-        let table = TruthTable::try_from(PermutationIter::new("A => Z"))?;
-        assert_eq!(table.variables, vec!['A', 'Z']);
-        assert_eq!(table.results, vec![true, true, false, true]);
+        let result = TruthTable::try_from(PermutationIter::new("A => Z"))?;
+        assert_eq!(result.variables, vec!['A', 'Z']);
+        assert_eq!(result.results, vec![true, true, false, true]);
         Ok(())
-    }
-
-    #[test]
-    fn test_valid_rule() -> Result<()> {
-        let table = TruthTable::try_from(PermutationIter::new("A + B <=> C"))?;
-        assert_eq!(table.variables, vec!['A', 'B', 'C']);
-        assert_eq!(
-            table.results,
-            vec![true, false, true, false, true, false, false, true]
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn error_empty() {
-        let table = TruthTable::try_from(PermutationIter::new(""));
-        assert!(table.is_err());
     }
 
     #[test]
     fn error_invalid_rule() {
-        let table = TruthTable::try_from(PermutationIter::new("A + B => "));
-        assert!(table.is_err());
+        let result = TruthTable::try_from(PermutationIter::new("A = Z"));
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to evaluate permutation 0 = 0"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_rule_map {
+    use super::*;
+
+    use anyhow::Result;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn empty() -> Result<()> {
+        let result = RuleMap::try_from(Vec::<String>::new())?;
+        assert!(result.map.is_empty());
+        Ok(())
     }
 
     #[test]
-    // TODO: Add more tests once TryFrom<Vec<&str>> is implemented
-    fn test_rulemap() -> Result<()> {
-        let mut map = RuleMap::try_from(vec![
-            TruthTable::try_from(PermutationIter::new("A + B <=> C"))?,
-            TruthTable::try_from(PermutationIter::new("A <=> 1"))?,
-            TruthTable::try_from(PermutationIter::new("B <=> 1"))?,
-        ])
-        .unwrap();
-        map.insert(TruthTable::try_from(PermutationIter::new("D <=> C"))?);
-        println!("{:?}", map);
+    fn from() -> Result<()> {
+        let result = RuleMap::try_from(vec!["A => B", "B => C"])?;
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
         Ok(())
+    }
+
+    #[test]
+    fn insert() -> Result<()> {
+        let mut result = RuleMap::try_from(Vec::<String>::new())?;
+        result.insert("A => B")?;
+        assert_eq!(result.map.len(), 2);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 1);
+
+        result.insert("B => C")?;
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn insert_vec() -> Result<()> {
+        let mut result = RuleMap::try_from(Vec::<String>::new())?;
+        result.insert_vec(vec!["A => B", "B => C"])?;
+        assert_eq!(result.map.len(), 3);
+        assert_eq!(result.map.get(&'A').map_or(0, |v| v.len()), 1);
+        assert_eq!(result.map.get(&'B').map_or(0, |v| v.len()), 2);
+        assert_eq!(result.map.get(&'C').map_or(0, |v| v.len()), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn error_invalid_rule() {
+        let result = RuleMap::try_from(vec!["A =>"]);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Failed to create truth table from: 'A =>'"
+        );
     }
 }

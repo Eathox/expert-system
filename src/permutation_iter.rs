@@ -1,5 +1,6 @@
 use crate::*;
 
+use std::borrow::Borrow;
 use std::collections::HashSet;
 
 // PermutationIter is an iterator that iterates over all permutations of a rule input string
@@ -9,15 +10,18 @@ use std::collections::HashSet;
 // `0 => 1`
 // `1 => 0`
 // `1 => 1`
-#[derive(Default)]
-pub struct PermutationIter<'a> {
-    formula: &'a str,
+pub struct PermutationIter {
+    formula: String,
     pub variables: Vec<char>,
     size: usize,
 }
 
-impl PermutationIter<'_> {
-    pub fn new(formula: &str) -> PermutationIter {
+impl PermutationIter {
+    pub fn new<T>(formula: T) -> PermutationIter
+    where
+        T: Borrow<str>,
+    {
+        let formula = formula.borrow().to_owned();
         let mut set = HashSet::new();
         let mut variables = formula
             .chars()
@@ -32,14 +36,14 @@ impl PermutationIter<'_> {
     }
 }
 
-impl Iterator for PermutationIter<'_> {
+impl Iterator for PermutationIter {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.size == 1 << self.variables.len() {
             None
         } else {
-            let mut permutation = String::from(self.formula);
+            let mut permutation = self.formula.clone();
             for (i, c) in self.variables.iter().enumerate() {
                 permutation = permutation.replace(
                     &c.to_string(),
