@@ -1,7 +1,6 @@
-use crate::*;
+use super::is_identifier;
 
-use std::borrow::Borrow;
-use std::collections::HashSet;
+use std::{borrow::Borrow, collections::HashSet};
 
 // PermutationIter is an iterator that iterates over all permutations of a rule input string
 // The order in which the permutations are generated is always following the same pattern, example:
@@ -61,7 +60,7 @@ impl Iterator for PermutationIter {
 }
 
 #[cfg(test)]
-mod tests_permutation_iter {
+mod tests {
     use super::*;
 
     use pretty_assertions::assert_eq;

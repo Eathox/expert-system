@@ -1,8 +1,12 @@
-use crate::*;
+mod sanitize_lines;
+
+pub use sanitize_lines::*;
+
+use crate::logic::is_identifier;
+use crate::utils::read_file;
 
 use anyhow::{anyhow, Context, Result};
-use core::fmt;
-use std::{borrow::Borrow, collections::HashSet, path::PathBuf};
+use std::{borrow::Borrow, fmt, path::PathBuf};
 
 #[derive(PartialEq)]
 pub struct Input {
@@ -29,7 +33,7 @@ impl TryFrom<PathBuf> for Input {
     fn try_from(file_path: PathBuf) -> Result<Self, Self::Error> {
         let content: Vec<String> = read_file(&file_path)
             .context(format!("Failed to read input file: '{:?}'", file_path))?;
-        Self::try_from(content)
+        content.try_into()
     }
 }
 
@@ -40,7 +44,7 @@ where
     type Error = anyhow::Error;
 
     fn try_from(lines: Vec<T>) -> Result<Self, Self::Error> {
-        let mut lines = sanitize::sanitize_lines(&lines);
+        let mut lines = sanitize_lines(&lines);
 
         let mut rules: Vec<String> = vec![];
         let mut facts: Option<String> = None;
@@ -72,26 +76,24 @@ where
             return Err(anyhow!("Invalid identifier in query: '{}'", c));
         }
 
-        let mut fact_set = HashSet::new();
-        let mut queries_set = HashSet::new();
+        let mut facts_set = facts.chars().map(String::from).collect::<Vec<String>>();
+        facts_set.dedup();
+
+        let mut queries_set = queries.chars().map(String::from).collect::<Vec<String>>();
+        queries_set.dedup();
+
         Ok(Input {
             rules,
-            facts: facts
-                .chars()
-                .filter(|c| fact_set.insert(c.to_owned()))
-                .collect(),
-            queries: queries
-                .chars()
-                .filter(|c| queries_set.insert(c.to_owned()))
-                .collect(),
+            facts: facts_set.concat(),
+            queries: queries_set.concat(),
         })
     }
 }
 
 #[cfg(test)]
-mod tests_input {
+mod tests {
     use super::*;
-    use crate::test_utils;
+    use crate::utils::test_utils;
 
     use anyhow::Result;
     use pretty_assertions::assert_eq;

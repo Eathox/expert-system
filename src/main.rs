@@ -1,7 +1,5 @@
 extern crate expert_system;
 use expert_system::*;
-use input::Input;
-use parser::RuleMap;
 
 use anyhow::{Context, Result};
 use std::{env, path::PathBuf};
@@ -22,7 +20,7 @@ fn main() -> Result<()> {
     let input = Input::try_from(PathBuf::from(input_file)).context("Unable to read input file")?;
 
     println!("{:?}", input);
-    let map = RuleMap::try_from(input.rules).context("Failed to parse rule")?;
+    let map = RuleMap::try_from(input.rules).context("Failed to parse rule map")?;
     println!("{:?}", map);
 
     Ok(())

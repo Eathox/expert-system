@@ -1,10 +1,8 @@
 extern crate expert_system;
-use expert_system::USAGE;
 
 mod test_utils;
 
-use assert_cmd::assert::*;
-use assert_cmd::cargo::CommandCargoExt;
+use assert_cmd::{assert::*, cargo::CommandCargoExt};
 use std::process::Command;
 
 macro_rules! _run_cmd {
@@ -46,12 +44,14 @@ fn example_input() {
 
 #[test]
 fn error_usage_no_arguments() {
-    run_cmd!().failure().stderr(USAGE);
+    run_cmd!().failure().stderr(expert_system::USAGE);
 }
 
 #[test]
 fn error_usage_to_many_arguments() {
-    run_cmd!("foo", "bar").failure().stderr(USAGE);
+    run_cmd!("foo", "bar")
+        .failure()
+        .stderr(expert_system::USAGE);
 }
 
 #[test]
