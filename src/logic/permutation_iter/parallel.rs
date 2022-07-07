@@ -19,43 +19,36 @@ impl ParallelPermutationIter {
         thread_count: usize,
     ) -> ParallelPermutationIter {
         let total_end = 1 << variables.len();
-        let mut chunked_iters = Vec::with_capacity(thread_count);
+        let mut chunked_ranges = Vec::with_capacity(thread_count);
         match thread_count {
             0 => panic!("thread_count must be greater than 0"),
-            1 => {
-                chunked_iters.push(SequentialPermutationIter::new(
-                    formula,
-                    variables.clone(),
-                    pos_map,
-                    0,
-                    total_end,
-                ));
-            }
+            1 => chunked_ranges.push((0, total_end)),
             _ => {
-                let step = total_end / thread_count;
-                let mut start;
+                let mut start = 0;
                 let mut end;
+                let step = total_end / thread_count;
                 for i in 0..(thread_count) {
-                    start = step * i;
+                    start += step;
                     end = start + step;
                     if i == (thread_count - 1) {
                         end = total_end;
                     }
-
-                    chunked_iters.push(SequentialPermutationIter::new(
-                        formula.clone(),
-                        variables.clone(),
-                        pos_map.clone(),
-                        start,
-                        end,
-                    ));
+                    chunked_ranges.push((start, end));
                 }
             }
         }
 
         let (sender, receiver) = bounded(PARALLEL_THREAD_BUFF_SIZE * thread_count);
-        for iter in chunked_iters {
+        for (start, end) in chunked_ranges {
             let thread_sender = sender.clone();
+            let iter = SequentialPermutationIter::new(
+                formula.clone(),
+                variables.clone(),
+                pos_map.clone(),
+                start,
+                end,
+            );
+
             std::thread::spawn(move || {
                 for permutation in iter {
                     thread_sender.send(permutation).unwrap();
