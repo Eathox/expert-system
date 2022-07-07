@@ -64,11 +64,11 @@ where
             }
         }
 
-        let facts = facts.ok_or(anyhow!("No facts in input file"))?;
+        let facts = facts.ok_or_else(|| anyhow!("No facts in input file"))?;
         if let Some(c) = facts.chars().find(|c| !is_identifier(c)) {
             return Err(anyhow!("Invalid identifier in facts: '{}'", c));
         }
-        let queries = queries.ok_or(anyhow!("No queries in input file"))?;
+        let queries = queries.ok_or_else(|| anyhow!("No queries in input file"))?;
         if let Some(c) = queries.chars().find(|c| !is_identifier(c)) {
             return Err(anyhow!("Invalid identifier in query: '{}'", c));
         }
